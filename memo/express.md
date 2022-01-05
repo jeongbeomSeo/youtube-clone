@@ -31,8 +31,6 @@ import express from "express";
 const PORT = 4000;
 
 const app = express();	--> application을 만들기
-
-
 ///이부분아래로 코드 작성을 해야 한다는 것
 
 ///application설정 하는 부분
@@ -73,7 +71,7 @@ const PORT = 4000;
 const app = express();
 
 const handleHome = (req, res) => {
-	return res.ens();
+	return res.end();
 };
 
 const handleLogin = (req, res) => {
@@ -114,7 +112,7 @@ console.log를 사용해서 res를 들여다 보면, 또한 여러가지 정보�
 
 ```javascript
 const handleHome = (req, res, ***next***) => {
-	return res.sens();
+	return res.send();
 };
 ```
 
@@ -149,7 +147,7 @@ app.get()말고 다른 것도 있는데, 그것이 app.use()이다.
 app.use는 global middleware를 만들 수 있게 해준다.
 
 순서는 middleware를 use하는 게 먼저오고, 그다음에 URL의 get이 와야 한다.
-이러한 방식으로 처리하면 app.use를 활용한 middleware를 위에다 두면, 모든 route에 적용되는 것이다.
+app.use를 활용한 middleware를 위에다 두면, 모든 route에 적용되는 것이다.
 
 밑에와 같이 사용할 수 있다는것을 볼 수 있다.
 
