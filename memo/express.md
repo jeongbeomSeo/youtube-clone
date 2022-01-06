@@ -12,7 +12,7 @@ request는 무엇인가?
 
 ex)google.com을 간다면, 지금 google.com에 request를 보낸것
 
-ex)google.com/login이면, google서버에 /login으로의 requeset 그걸 google.com 서버는 listening하는 중인것, 유뷰트 재생클릭, 등등... 
+ex)google.com/login이면, google서버에 /login으로의 requeset 그걸 google.com 서버는 listening하는 중인것, 유뷰트 재생클릭, 등등...
 
 결국 **서버와 상호작용 하는 모든 것이 전부 request**이다.
 
@@ -21,7 +21,6 @@ ex)google.com/login이면, google서버에 /login으로의 requeset 그걸 googl
 /는 root를 의미한다.
 
 웹사이트 접속할때 벌어지는 get은 "해당 페이지를 갖다줘" 할 때의 get으로 사용된다.
-
 
 기본적인 코드 작성은 express application가 만들어진 다음부터 코드를 작성해야 한다.
 
@@ -51,7 +50,7 @@ app.listen(PORT, handleListening);
 
 **if) app.get("/", () => console.log("Somebody is trying to go home."))**
 
-이런식으로 해서 그냥 보내면 브라우저는 request를 요청하고 **무한 로딩**이 걸릴 것이다. 
+이런식으로 해서 그냥 보내면 브라우저는 request를 요청하고 **무한 로딩**이 걸릴 것이다.
 
 why? 응답을 해줘야 하는데 안해줘서 그런다.
 
@@ -71,17 +70,18 @@ const PORT = 4000;
 const app = express();
 
 const handleHome = (req, res) => {
-	return res.end();
+  return res.end();
 };
 
 const handleLogin = (req, res) => {
-	return res.send("I still login");
+  return res.send("I still login");
 };
 
 app.get("/", handleHome);
 app.get("/login", handleLogin);
 
-const handleListening = () => console.log(`✅ Server listening on port http://localhost:${PORT} 🔥`);
+const handleListening = () =>
+  console.log(`✅ Server listening on port http://localhost:${PORT} 🔥`);
 
 app.listen(PORT, handleListening);
 ```
@@ -96,9 +96,7 @@ console.log를 사용해서 res를 들여다 보면, 또한 여러가지 정보�
 
 **res.end()** 를 통해서 종료시킬 수 있고, **res.send()** 를 통해서 메세지를 입력할 수도 있다.
 
-
-
-----------------
+---
 
 ### Middleware
 
@@ -111,33 +109,33 @@ console.log를 사용해서 res를 들여다 보면, 또한 여러가지 정보�
 위에서 하나만 가져와서 살펴보자면,
 
 ```javascript
-const handleHome = (req, res, ***next***) => {
-	return res.send();
+const handleHome = (req, res, next) => {
+  return res.send();
 };
 ```
 
-이와 같이 next라는 인자를 추가하여 사용하면 된다.
+이와 같이 **next**라는 인자를 추가하여 사용하면 된다.
 
-정확히 사용하는 방식을 적어보자면, 
+정확히 사용하는 방식을 적어보자면,
 
 ```javascript
 const gossipMiddleware = (req, res, next) => {
-	console.log("I'm in the middle!");
-	next();
+  console.log("I'm in the middle!");
+  next();
 };
 
 app.get("/", gossipMiddleware, handleHome);
 ```
 
 이러한 방식으로 controller를 중간에 넣어주면서 middleware역할을 수행하는 것이다.
-단, gossipMiddleware처럼 next();를 호출한다면 이것은 middleware이다.
+gossipMiddleware처럼 next();를 호출한다면 이것은 middleware인 것이다.
 
-여기서 만약 그러면 
+여기서 만약 그러면
 
 ```javascript
 const gossipMiddleware = (req, res, next) => {
-	return res.send("I love middlewares");
-	next();
+  return res.send("I love middlewares");
+  next();
 };
 ```
 
@@ -173,7 +171,7 @@ const privateMiddleware = (req, res, next) => {
 };
 
 const handleHome = (req, res) => {
-  return res.send("I love middlewares"); 
+  return res.send("I love middlewares");
 };
 
 app.use(privateMiddleware);
@@ -190,4 +188,3 @@ Morgan은 node.js용 request logger middleware다.
 
 morgan에서 logger역할인 morgan("dev")의 경우
 Middelware를 사용할 경우 출력에 GET, path, status code, 응답시간.. 등 출력 해준다.
-
