@@ -23,6 +23,7 @@ let videos = [
     views: 59,
     id: 3,
   },
+  null,
 ];
 
 export const trending = (req, res) => {
