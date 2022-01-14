@@ -1,12 +1,20 @@
 # 이론 관련 정리
 
-##  1. NodeJS에 관하여
+- [이론 관련 정리](#이론-관련-정리)
+  - [1. NodeJS에 관하여](#1-nodejs에-관하여)
+    - [1.1. Node.js란?](#11-nodejs란)
+    - [1.2 npm이란?](#12-npm이란)
+  - [2. express에 관하여](#2-express에-관하여)
+    - [2.1. express란?](#21-express란)
+    - [2.2. req와 res](#22-req와-res)
+
+## 1. NodeJS에 관하여
 
 ### 1.1. Node.js란?
 
 **Node.js**는 Chrome V8 Javscript 엔진으로 빌드된 Javascript **런타임**이다.
 
->   런타임이란 프로그래밍 언어가 구동되는 환경
+> 런타임이란 프로그래밍 언어가 구동되는 환경
 
 예전에는 자바스크립트 런타임이 브라우저 밖에 존재하질 않았다.
 
@@ -16,7 +24,7 @@
 
 **npm**은 Node Packaged Manager의 약자로서, 자바스크립트 패키지 매니저이고 Node.js에서 사용할 수 있는 모듈들을 패키지화여 모아둔 저장소 역할을 하며 설치/관리를 수행할 수 있는 CLI를 제공한다.
 
->   CLI란 Command-line interface의 약자로서 명령어 인터페이스이다. 가상 터미널 또는 터미널을 통해 사용자와 컴퓨터가 상호 작용하는 방식을 뜻한다.
+> CLI란 Command-line interface의 약자로서 명령어 인터페이스이다. 가상 터미널 또는 터미널을 통해 사용자와 컴퓨터가 상호 작용하는 방식을 뜻한다.
 
 **Node Packaged Manager**를 좀 더 적어보자면, Packaged라는 것은 package로 만들어진 것들을 의미한다. **package**는 모듈이라고 보면 되는데, 패키지나 모듈은 프로그램보다는 조금 작은 단위의 기능들을 의미한다. **Manager**은 관리자를 의미한다.
 

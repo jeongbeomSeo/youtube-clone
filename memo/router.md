@@ -1,6 +1,11 @@
 # Router part
 
-## Router란 무엇인가?
+- [Router part](#router-part)
+  - [1.Router란 무엇인가?](#1router란-무엇인가)
+  - [2.Router 사용 방법](#2router-사용-방법)
+    - [2.1 If) URL에 변수가 필요한 상황이라면?](#21-if-url에-변수가-필요한-상황이라면)
+
+## 1.Router란 무엇인가?
 
 **Router**는 클라이언트의 요청 경로(path)를 보고 이 요청을 처리할 수 있는 곳으로 기능을 전달해주는 역할을 한다. 이러한 역할을 **라우팅**이라고 하는데, 에플리케이션 엔드 포인트 (URI)의 정의, 그리고 URI가 클라이언트 요청에 응답하는 방식을 의미한다.
 
@@ -14,7 +19,7 @@
 >
 > 출처: [jch9537님의 URI & URL](https://velog.io/@jch9537/URI-URL)
 
-## Router 사용 방법
+## 2.Router 사용 방법
 
 express에선 이러한 라우터를 미들웨어로서 제공하고 있다. 사용하는 방식은 아래와 같다.
 
@@ -94,7 +99,7 @@ export default userRouter;
 
 1.  클라이언트가 서버에 Request요청
 2.  서버가 server.js에서 app 객체에 /user로 등록되어 있는 경로가 있는지 체크후 라우터 객체로 넘어간다.
-3.  라우터 객체에서 /edit가 등록되어 있는 라우팅 함수로 가서 실행.
+3.  라우터 객체에서 /edit가 등록되어 있는 콜백 함수로 가서 실행.
 
     > userRouter안에 들어가서 맞는 주소는 다음과 같이 찾는다.
 
@@ -115,7 +120,7 @@ export const handleuser = (req, res) => res.send("Home");
 
 이러한 식으로 처리한다면 controller와 router가 분리될 것이다.
 
-### If) URL에 변수가 필요한 상황이라면?
+### 2.1 If) URL에 변수가 필요한 상황이라면?
 
 youtube같은 곳을 보면 URL이 미세하게 다른 것을 확인 할 수 있을 것이다.
 

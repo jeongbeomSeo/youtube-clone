@@ -1,10 +1,17 @@
 # EXPRESS PART
 
-## server란 무엇인가?
+- [EXPRESS PART](#express-part)
+  - [1.server란 무엇인가?](#1server란-무엇인가)
+  - [2.request와 response?](#2request와-response)
+    - [2.1 app.get("/", CALLBACK)?](#21-appget-callback)
+    - [2.2 response는 어케하는가?](#22-response는-어케하는가)
+    - [2.3 Middleware](#23-middleware)
+
+## 1.server란 무엇인가?
 
 서버는 24시간 내내 온라인에 연결된 컴퓨터 그리고 request를 listening하고있다.
 
-## request와 response?
+## 2.request와 response?
 
 request는 무엇인가?
 
@@ -42,7 +49,7 @@ app.listen(PORT, handleListening);
 
 app.listen을 통해서 해당 PORT 받아서 열어 주는 방식으로 마무리가 된다.
 
-### app.get("/", CALLBACK)?
+### 2.1 app.get("/", CALLBACK)?
 
 get()은 주소창에 입력 받았을 때 실행할 사항들을 나타내는 라우팅 함수이다.
 
@@ -62,7 +69,7 @@ request를 하는 방법 중 하나는, url에게 get request를 보내는 것�
 
 그리고 request로 요청을 했으면 response가 필요한 것 같다.
 
-### response는 어케하는가?
+### 2.2 response는 어케하는가?
 
 간단하게 말하자면, Argument를 사용한다.
 위에 코드를 아래로 다시한번 가져와 보자.
@@ -99,7 +106,7 @@ console.log를 사용해서 res를 들여다 보면, 또한 여러가지 정보�
 
 ---
 
-### Middleware
+### 2.3 Middleware
 
 **Middleware는 중간에 있는 소프트웨어** 즉, request와 response사이에 있는 것.
 
