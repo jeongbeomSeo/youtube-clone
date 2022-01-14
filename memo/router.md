@@ -1,11 +1,11 @@
 # Router part
 
 - [Router part](#router-part)
-  - [1.Router란 무엇인가?](#1router란-무엇인가)
-  - [2.Router 사용 방법](#2router-사용-방법)
+  - [1. Router란 무엇인가?](#1-router란-무엇인가)
+  - [2. Router 사용 방법](#2-router-사용-방법)
     - [2.1 If) URL에 변수가 필요한 상황이라면?](#21-if-url에-변수가-필요한-상황이라면)
 
-## 1.Router란 무엇인가?
+## 1. Router란 무엇인가?
 
 **Router**는 클라이언트의 요청 경로(path)를 보고 이 요청을 처리할 수 있는 곳으로 기능을 전달해주는 역할을 한다. 이러한 역할을 **라우팅**이라고 하는데, 에플리케이션 엔드 포인트 (URI)의 정의, 그리고 URI가 클라이언트 요청에 응답하는 방식을 의미한다.
 
@@ -19,7 +19,7 @@
 >
 > 출처: [jch9537님의 URI & URL](https://velog.io/@jch9537/URI-URL)
 
-## 2.Router 사용 방법
+## 2. Router 사용 방법
 
 express에선 이러한 라우터를 미들웨어로서 제공하고 있다. 사용하는 방식은 아래와 같다.
 

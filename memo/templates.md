@@ -1,24 +1,24 @@
 # Templates
 
 - [Templates](#templates)
-  - [1.Templates Engine이란?](#1templates-engine이란)
-  - [2.PUG란?](#2pug란)
+  - [1. Templates Engine이란?](#1-templates-engine이란)
+  - [2. PUG란?](#2-pug란)
     - [2.1 PUG 문법](#21-pug-문법)
     - [2.2 PUG 설치 및 원리](#22-pug-설치-및-원리)
-  - [3.PUG 사용 방법](#3pug-사용-방법)
+  - [3. PUG 사용 방법](#3-pug-사용-방법)
     - [3.1 include(코드 삽입)](#31-include코드-삽입)
     - [3.2 inheritance(상속)](#32-inheritance상속)
     - [3.3 변수 처리](#33-변수-처리)
     - [3.4 conditionals(조건문 사용법)](#34-conditionals조건문-사용법)
     - [3.5 iteration(배열 사용법)](#35-iteration배열-사용법)
     - [3.6 Mixing(함수)](#36-mixing함수)
-  - [4.[MVP] CSS 프레임 워크](#4mvp-css-프레임-워크)
+  - [4. [MVP] CSS 프레임 워크](#4-mvp-css-프레임-워크)
 
-## 1.Templates Engine이란?
+## 1. Templates Engine이란?
 
 **템플릿 엔진(Template Engine)** 은 PHP나 JSP처럼 동적인 결과를 정적인 파일(HTML)에 담기 위해 사용한다. 즉, 서버 코드인 Javascript로 연산된 결과를 변수에 넣고 변수를 뷰(view) 파일에서도 사용할 수 있도록 해준다. 따라서 서버 파일내에 HTML코드를 쓰지 않아도 되므로 뷰와 서버 코드를 따로 따로 관리할 수 잇도록 해준다.
 
-## 2.PUG란?
+## 2. PUG란?
 
 View Engine인 PUG를 사용할 것인데, PUG는 기존의 HTML을 더욱 간결하게 만든 코드로 Javascript 코드를 사용할 수도 있다. 이 PUG를 이용해서 동적 뷰를 만들어 보기 전에 HTML코드와의 차이점을 정리해 보자.
 
@@ -118,7 +118,7 @@ html(lang="ko")
 >
 > > [[HTML] 렌더링(Rendering)이란?](https://chunggaeguri.tistory.com/entry/HTML-%EB%A0%8C%EB%8D%94%EB%A7%81Rendering%EC%9D%B4%EB%9E%80) > > [HTML 기초 - 3 (렌더링이란?)](https://velog.io/@ru_bryunak/%EB%A0%8C%EB%8D%94%EB%A7%81%EC%9D%B4%EB%9E%80)
 
-## 3.PUG 사용 방법
+## 3. PUG 사용 방법
 
 위에서 잠깐 pug 코드를 봤지만, 여기서 재대로 다뤄볼 예정이다.
 
@@ -430,7 +430,7 @@ block content
 인자를 받지 않는경우 **_+Mixin_**으로 사용하고,
 위와 같이 인자를 받는 경우 **_+Mixin(Arg)_**와 같이 사용하면 된다.
 
-## 4.[MVP] CSS 프레임 워크
+## 4. [MVP] CSS 프레임 워크
 
 CSS 프레임워크 중에서 가장 심플한 것이 mvp이다. Bootstrap, Material, Foundation과 같은 CSS 프레임워크를 사용할 때는 해당 프레임워크가 만든 class명을 써줘야 한다. 하지만 MVP는 기본 HTML태그를 있는 그대로 꾸며준다.
 

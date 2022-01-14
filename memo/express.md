@@ -1,17 +1,17 @@
 # EXPRESS PART
 
 - [EXPRESS PART](#express-part)
-  - [1.server란 무엇인가?](#1server란-무엇인가)
-  - [2.request와 response?](#2request와-response)
+  - [1. server란 무엇인가?](#1-server란-무엇인가)
+  - [2. request와 response?](#2-request와-response)
     - [2.1 app.get("/", CALLBACK)?](#21-appget-callback)
     - [2.2 response는 어케하는가?](#22-response는-어케하는가)
     - [2.3 Middleware](#23-middleware)
 
-## 1.server란 무엇인가?
+## 1. server란 무엇인가?
 
 서버는 24시간 내내 온라인에 연결된 컴퓨터 그리고 request를 listening하고있다.
 
-## 2.request와 response?
+## 2. request와 response?
 
 request는 무엇인가?
 
