@@ -134,17 +134,13 @@ mixin video(info)
 
 이것은 string안에 #{}을 적으면 변수로 인식하지 못하기 때문입니다.
 
-string안에 변수 사용하는 방식은 두 가지가 있습니다.
+> string안에 변수 사용하는 방식은 두 가지가 있습니다.
+>
+> > a(href=`/videos/${info.id}`)
+> >
+> > a(href="/videos/" + video.id)
 
-```pug
-a(href=`/videos/${info.id}`)
-
-a(href="/videos/" + video.id)
-```
-
-이렇게 **``(backtick)을 사용해서 ${}** 을 사용하거나 중간에 **" " + variable** 로 사용하는 두 가지 방식이 있습니다.
-
-이제 home에서 anchor을 통해서 이동을 하면 url에 vidoe.id가 추가가 될 것입니다. 이것을 controller에서 받아오려면 어떻게 해야될까요? 그 때 사용하는 것이 **req.params**입니다.
+이제 home에서 anchor을 통해서 이동을 하면 url에 vidoe.id가 추가가 될 것입니다. 이것을 **controller에서 받아오려면** 어떻게 해야될까요? 그 때 사용하는 것이 **req.params**입니다.
 
 ### 2.2 Request Properties
 
@@ -180,7 +176,7 @@ const {
 } = req;
 ```
 
-아래에 req객체 중에서도 자주 쓰이는 property를 정리해 보았다.
+아래에 req객체 중에서도 자주 쓰이는 property를 정리해 보았습니다.
 
 #### 2.2.1 req.params
 
@@ -264,7 +260,9 @@ block content
 
 두 전송방식의 차이점은 URL을 통해서 설명을 할 수 있습니다.
 
-다음은 GET방식을 사용했을 때 URL입니다.
+다음은 예시로서 URL이 save-on인 페이지에서 form을 통해 정보를 입력하고 submit를 했을 때 GET방식과 POST방식의 차이를 봅시다.
+
+GET방식을 사용했을 때 URL입니다.
 
 ![GET URL](./screenshot/GET-URL.png)
 
@@ -276,7 +274,7 @@ block content
 
 데이터를 전송하는 것은 똑같지만 POST 전송 방식의 경우 데이터가 URL에 드러나지 않습니다. POST방식의 경우 로그인을 할 때나, database에 있는 값을 바꾸려고 할 때 사용합니다.
 
-그렇다면 POST 방식으로 request를 받을 때 서버가 controller를 이용하려면 어떻게 처리해야 될까요?
+그렇다면 다시 돌아와서 POST 방식으로 request를 받을 때 서버가 controller를 이용하려면 어떻게 처리해야 될까요?
 
 라우터 객체에 get방식과 동일하게 해주면 됩니다.
 
@@ -308,7 +306,7 @@ export const postEdit = (req, res) => {
 
 페이지 이동은 해결을 했습니다.
 
-그렇다면 데이터를 받아서 처리해주는 작업만이 남았습니다.
+하지만 아직 POST를 이용해서 보낸 데이터를 받지를 않았습니다.
 
 위에서 설명했듯이 req.body가 POST전송방식에서 자주 쓰이고, 사용하려면 express.urlencoded()를 해줘야 합니다.
 
@@ -796,7 +794,7 @@ pug는 기본적으로 html의 코드를 pug만의 코드로 사용하는 것이
 
 #### 4.3.2 controller.js
 
-아직 router에 [post메소드를 등록](#24-get-request-vs-post-request)해놓지 않았기에 등록합니다.
+아직 router에 post메소드를 등록해놓지 않았기에 등록합니다.
 
 router.js
 
@@ -975,7 +973,7 @@ const Video = mongoose.model("Video", videoSchema);
 export default Video;
 ```
 
-input 옵션과 비슷하기에 넘어가고 **trim**은 띄어쓰기를 지워주는 것입니다.
+input 옵션과 비슷하기에 넘어가고 **trim**은 앞뒤 공백을 지워주는 것입니다.
 
 > 만약, required를 한 필드에 맞지 않는 타입을 저장하려면 어떻게 될까?
 >

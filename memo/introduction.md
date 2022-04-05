@@ -17,9 +17,10 @@
 2.  [Set-up](./set-up.md)
 3.  [Express](./express.md)
 4.  [Router](./router.md)
-5.  [Templates](./templates.md))
+5.  [Templates](./templates.md)
 6.  [Database](./database.md)
 7.  [User Authentication](./user-authenticatoin.md)
+8.  [User Profile](./user-profile.md)
 
 [Challenge](./challenge.md)의 경우 challenge를 하면서 알게 된 것들을 정리한 파일입니다.
 

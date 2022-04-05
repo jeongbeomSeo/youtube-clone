@@ -141,7 +141,6 @@ gossipMiddleware처럼 **next()** 이것은 middleware인 것입니다.
 ```javascript
 const gossipMiddleware = (req, res, next) => {
   return res.send("I love middlewares");
-  next();
 };
 
 app.get("/", gossipMiddleware, handleHome);

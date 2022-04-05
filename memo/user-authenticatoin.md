@@ -127,7 +127,7 @@ export const postJoin = async (req, res) => {
 
 ![exposure password problem](./screenshot/exposure-password.png)
 
-[위에서](#3-유저-생성) 말했다싶히 Password를 그대로 넣어줄 경우 보안상 문제가 있습니다. 여기서 **Hashing(해싱)** 이라는 개념이 나옵니다.
+위에서 말했다싶히 Password를 그대로 넣어줄 경우 보안상 문제가 있습니다. 여기서 **Hashing(해싱)** 이라는 개념이 나옵니다.
 
 ### 3.3 Password Hashing
 
@@ -160,7 +160,7 @@ export const postJoin = async (req, res) => {
 
 #### 3.3.2 bcrypt
 
-**bcrypt**는 NodeJS에서 사용되는 **Hash Function을 사용한 패스워드 암호화 패키지(라이브러리)**입니다. Blowfish 암호를 기반으로 설계된 **암호화 함수**이며 현재까지 사용중인 **가장 강력한 해시 메커니즘 중 하나**입니다.위에서 말했다싶히 **bcrypt**는 Rainbow Table을 이용한 공격을 사전에 방지하기 위해 **Salt**라는 개념이 추가되었습니다.
+**bcrypt**는 NodeJS에서 사용되는 **Hash Function을 사용한 패스워드 암호화 패키지(라이브러리)** 입니다. Blowfish 암호를 기반으로 설계된 **암호화 함수**이며 현재까지 사용중인 **가장 강력한 해시 메커니즘 중 하나**입니다.위에서 말했다싶히 **bcrypt**는 Rainbow Table을 이용한 공격을 사전에 방지하기 위해 **Salt**라는 개념이 추가되었습니다.
 
 **Salting**은 음식에 간을 치듯이, 유저가 어떤 비밀번호를 설정했든지 상관없이, 거기에 **난수까지 추가**하여 해시함수에 집어넣는 것입니다. 즉,
 비밀번호의 복잡도를 키워 보안을 높이는 것입니다.
@@ -237,7 +237,7 @@ block content
 		span=errorMessage
   form(method="post")
     input(placeholder="Name" name="name" , type="text", required )
-    input(placeholder="Eamil" name="email" , type="email", required )
+    input(placeholder="Email" name="email" , type="email", required )
     input(placeholder="Username" name="username" , type="text", required )
     input(placeholder="Password" name="password" , type="password", required )
     input(placeholder="Confirm Password" name="password2" , type="password", required )
@@ -315,11 +315,11 @@ username과 email이 **동시에 일치할 때만** True값을 반환해 줄 것
     });
 ```
 
-이 부분은 어쩔 수 없습니다. 이 상태로 냅두고 다음 문제로 넘어가 봅시다.
+이 부분은 어쩔 수 없습니다. 다음으로 넘어가겠습니다.
 
 #### 3.4.4 Status Code
 
-만약 구글 크롬에서 계정을 생성하는데 username이나 email이 중복되어서 Page에서 errorMessage를 받는다고 해봅시다. **그런데 크롬에선 아이디와 비밀번호를 저장하겠냐고 물어봅니다.** 이상하다. 분명 errorMessage도 받고 중복되는 것인데 이런것을 물어본다는 것은 브라우저에선 문제가 있다고 판단하지 않은 것입니다.
+만약 구글 크롬에서 계정을 생성하는데 username이나 email이 중복되어서 Page에서 errorMessage를 받는다고 해봅시다. **그런데 크롬에선 아이디와 비밀번호를 저장하겠냐고 물어봅니다.** 이상합니다. 분명 errorMessage도 받고 중복되는 것인데 이런것을 물어본다는 것은 브라우저에선 문제가 있다고 판단하지 않은 것입니다.
 
 Logger에 찍히는 Status Code를 보니 200이 찍혀 있었습니다. 이것은 브라우저가 문제 없이 돌아 간다 즉, OK라고 말하는 것입니다.
 
@@ -483,6 +483,7 @@ export const postLogin = async (req, res) => {
 >
 > > Hash값을 들여다 보면 다음과 같이 되어 있다.
 > > ![Hash](./screenshot/Hash.png)
+> >
 > > 참고: [bcrypt - 위키백과, 우리 모두의 백과사전](https://ko.wikipedia.org/wiki/Bcrypt)
 
 여기까지 한 것으론 아직 웹사이트내의 모든 페이지에서 로그인을 유지하는 기능을 구현하지 못했습니다. 그것은 **Session**을 알아보면서 구현하도록 해봅시다.
@@ -537,6 +538,7 @@ Google을 사용한다고 생각해 봅시다.
 **서버는 해당 세션ID로 정보를 관리하기 때문에 보안상 안전 할 수 있습니다.**
 
 참고: [웹브라우저 쿠키란? - 쿠키 개념, 세션 개념 (Cookie & Session) :: 세상에 도움이 되는 블로그](https://lovefor-you.tistory.com/247)
+
 [쿠키Cookie와 세션Session 이란? 차이점.](https://cheershennah.tistory.com/135)
 
 > 이러한 것들을 사용하는 이유는 HTTP가 Stateless 특징을 가지고 있기 때문이다.
@@ -618,7 +620,7 @@ request가 들어오면 해당 request에서 새로 생성된 session에 아무�
 
 참고: [express-session 패키지의 resave, saveUninitialized 옵션](https://fierycoding.tistory.com/36)
 
-**Session Id**는 어떻게 처리되는 것인가?
+**session Id**는 어떻게 처리되는 것인가?
 
 만약 내가 homepage에서 다음과 같이 코드를 해놓고 새로고침을 여러번 했다고 생각해 보자.
 
@@ -633,7 +635,7 @@ app.get("/add-one", (req, res, next) => {
 
 참고로 하나는 일반 크롬으로 하나는 시크릿 모드로해서 새로고침을 몇번씩 한 것이다.
 
-이와 같이 브라우저에서 웹사이트를 처음 방문할 때 **Session Middelware**가 있으면 **express**가 알아서 그 브라우저를 위한 **Session Id**를 만들고 브라우저한테 보내준다. 그러면 브라우저가 **쿠키에 Session Id를 저장**하고 **express에서 또한 이 Session을 Session DB에 저장**할 것이다. 이제 브라우저는 웹사이트를 방문할 때 마다 **request와 함께 Session Id**를 함께 보낼 것이다. 그러면 **서버(백엔드)** 에선 어떤 유저가 어떤 브라우저에서 요청을 보냈는지 알 수 있는 것이다.
+이와 같이 브라우저에서 웹사이트를 처음 방문할 때 **Session Middelware**가 있으면 **express**가 알아서 그 브라우저를 위한 **Session Id**를 만들고 브라우저한테 보내준다. 그러면 브라우저가 **쿠키에 session id를 저장**하고 **express에서 또한 이 Session을 Session DB에 저장**할 것이다. 이제 브라우저는 웹사이트를 방문할 때 마다 **request와 함께 session id**를 함께 보낼 것이다. 그러면 **서버(백엔드)** 에선 어떤 유저가 어떤 브라우저에서 요청을 보냈는지 알 수 있는 것이다.
 
 #### 4.2.3 세션 처리
 
@@ -927,9 +929,11 @@ a(href="https://github.com/login/oauth/authorize") Continue with Github &rarr;
 
 url을 이와같이 해서 보내주면 된다.
 
+```
 "https://github.com/login/oauth/authorize?client_id=[위에서 받은 client id]&allow_signup=false&scope= "
+```
 
-여기서 문제점이 발생한다. **allow_sighup**은 사용자가 Github 계정이 없다면 계정 생성을 할 수 잇도록 해줄 것인지 아니면 계정 있는 사람만 사용할 수 있도록 할 것인지를 정해준다. **scope**에는 유저에게서 얼마나 많은 정보를 읽어내고 어떤 정보를 가져올 것인가에 대한 것을 적어주는 것이다. **scope의 경우 공백**으로 구분한다. 이외에도 Parameters는 **redirect_url**, **login**, **state**가 있다. 이러한 것을 한 string으로 anchor안에 넣어준다면 가독성이 매우 나빠지고 관리하기도 안 좋아질 것이다.
+여기서 문제점이 발생한다. **allow_signup**은 사용자가 Github 계정이 없다면 계정 생성을 할 수 잇도록 해줄 것인지 아니면 계정 있는 사람만 사용할 수 있도록 할 것인지를 정해준다. **scope**에는 유저에게서 얼마나 많은 정보를 읽어내고 어떤 정보를 가져올 것인가에 대한 것을 적어주는 것이다. **scope의 경우 공백**으로 구분한다. 이외에도 Parameters는 **redirect_url**, **login**, **state**가 있다. 이러한 것을 한 string으로 anchor안에 넣어준다면 가독성이 매우 나빠지고 관리하기도 안 좋아질 것이다.
 
 #### 5.3.1 가독성 좋은 코드로 수정
 

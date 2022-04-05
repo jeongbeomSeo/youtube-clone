@@ -49,9 +49,9 @@ Express는 view engine을 사용하기 위해 찾는 기본 디렉토리가 현�
 
 먼저 현재 작업 디렉토리를 확인해줘야 합니다. 참고로 default repository의 경우 package.json이 있는 폴더입니다.
 
-    console.log(process.cwd());
-
     app.set("views", process.cwd() + "/src/views");
+
+> 현재 저는 views폴더를 pacaage.json이 있는 directory 에서 src 폴더안에서 관리하고 있습니다.
 
 이와 같은 과정을 거치고 나면 다음과 같이 app.js가 되어 있을 것입니다.
 
@@ -116,7 +116,8 @@ html(lang="ko")
 >
 > 참조:
 >
-> > [[HTML] 렌더링(Rendering)이란?](https://chunggaeguri.tistory.com/entry/HTML-%EB%A0%8C%EB%8D%94%EB%A7%81Rendering%EC%9D%B4%EB%9E%80) > > [HTML 기초 - 3 (렌더링이란?)](https://velog.io/@ru_bryunak/%EB%A0%8C%EB%8D%94%EB%A7%81%EC%9D%B4%EB%9E%80)
+> > [[HTML] 렌더링(Rendering)이란?](https://chunggaeguri.tistory.com/entry/HTML-%EB%A0%8C%EB%8D%94%EB%A7%81Rendering%EC%9D%B4%EB%9E%80)
+> > [HTML 기초 - 3 (렌더링이란?)](https://velog.io/@ru_bryunak/%EB%A0%8C%EB%8D%94%EB%A7%81%EC%9D%B4%EB%9E%80)
 
 ## 3. PUG 사용 방법
 
