@@ -123,7 +123,7 @@ export const finishGithubLogin = async (req, res) => {
     if (!user) {
       user = await User.create({
         name: userData.name,
-        avaterUrl: userData.avaterUrl,
+        avatarUrl: userData.avatarUrl,
         username: userData.login,
         email: emailObj.email,
         password: "",
@@ -143,5 +143,83 @@ export const logout = (req, res) => {
   req.session.destroy();
   return res.redirect("/");
 };
-export const see = (req, res) => res.send("See User");
-export const edit = (req, res) => res.send("Edit User");
+export const getEdit = (req, res) => {
+  return res.render("edit-profile", { pageTitle: "Edit Profile" });
+};
+export const postEdit = async (req, res) => {
+  const {
+    body: { name, email, username, location },
+    session: {
+      user: { _id, avatarUrl },
+    },
+    file,
+  } = req;
+  const findUsername = await User.findOne({ username });
+  const findEmail = await User.findOne({ email });
+  if (
+    (findUsername != null && findUsername._id != _id) ||
+    (findEmail != null && findEmail._id != _id)
+  ) {
+    return res.status(400).render("editProfile", {
+      pageTitle: "Edit  Profile",
+      errorMessage: "User is exist",
+    });
+  }
+  const updatedUser = await User.findByIdAndUpdate(
+    _id,
+    {
+      avatarUrl: file ? file.path : avatarUrl,
+      name,
+      email,
+      username,
+      location,
+    },
+    { new: true }
+  );
+  req.session.user = updatedUser;
+  return res.redirect("/users/edit");
+};
+
+export const getChangePassword = (req, res) => {
+  return res.render("users/change-password", { pageTitle: "Change Password" });
+};
+
+export const postChangePassword = async (req, res) => {
+  const {
+    body: { oldPassword, newPassword, newPasswordConfirmation },
+    session: {
+      user: { _id },
+    },
+  } = req;
+  const user = await User.findById(_id);
+  const ok = await bcrypt.compare(oldPassword, user.password);
+  if (!ok) {
+    return res.status(400).render("users/change-password", {
+      pageTitle: "Change Password",
+      errorMessage: "The current password is incorrect",
+    });
+  }
+  if (newPassword !== newPasswordConfirmation) {
+    return res.status(400).render("users/change-password", {
+      pageTitle: "Change Password",
+      errorMessage: "The password does not match the confirmation",
+    });
+  }
+  user.password = newPassword;
+  await user.save();
+  // send notification
+  return res.redirect("/users/logout");
+};
+
+export const see = async (req, res) => {
+  const { id } = req.params;
+  const user = await User.findById(id).populate("videos");
+  console.log(user);
+  if (!user) {
+    return res.status(404).render("404");
+  }
+  return res.render("users/profile", {
+    pageTitle: `${user.name}`,
+    user,
+  });
+};
