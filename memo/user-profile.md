@@ -1,5 +1,23 @@
 # User Profile
 
+- [User Profile](#user-profile)
+  - [1. Edit Profile](#1-edit-profile)
+    - [1.1 Template](#11-template)
+    - [1.2 Template 문제점 잡기](#12-template-문제점-잡기)
+    - [1.3 Controller](#13-controller)
+    - [1.4 Controller 문제점 잡기](#14-controller-문제점-잡기)
+    - [1.5 Change Password](#15-change-password)
+  - [2. File & Video Upload](#2-file--video-upload)
+    - [2.1 File Template](#21-file-template)
+    - [2.2 File Upload](#22-file-upload)
+    - [2.3 file upload 문제점](#23-file-upload-문제점)
+    - [2.4 Video Upload](#24-video-upload)
+  - [3. User Profile](#3-user-profile)
+    - [3.1 Template & Controller](#31-template--controller)
+    - [3.2 Model ( Relation )](#32-model--relation-)
+    - [3.3 User Profile 문제점 잡기](#33-user-profile-문제점-잡기)
+    - [3.4 마무리 짓기](#34-마무리-짓기)
+
 ## 1. Edit Profile
 
 Edit Page를 만들건데 이전과 동일한 순서대로 해보면 될 것 같습니다.
