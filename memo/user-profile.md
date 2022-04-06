@@ -707,7 +707,7 @@ http://localhost:4000/users/uploads/7da2e8635f3eb7d6387235df22387e8c
 
 static안에는 노출시키고 싶은 폴더를 적으면 된다.
 
-### 2.3 file upload 문제점 잡기
+### 2.3 file upload 문제점
 
 몇가지 문제점이 발생한다.
 
@@ -715,4 +715,388 @@ static안에는 노출시키고 싶은 폴더를 적으면 된다.
 2. 서버가 종료되고 다시 시작할 때 이전 서버에 저장되어 있던 파일들은 날아간다.
 3. 사람이 너무 많아서 서버를 두개 이상 운영할 때 uploads폴더를 공유하는 것일까?
 
-2번과 3번은 서버를 배포하는 Part에서 알아보기로 하고 1번을 해결해보자.
+이 부분의 문제점들은 나중에 서버에 배포할 때 고쳐보자.
+
+### 2.4 Video Upload
+
+이제 Video를 업로드 해볼 것인데, 먼저 Template을 수정해줘야 할 것이다.
+
+앞서 봤던 것과 비슷하고 중요한 것은 꼭 **enctype**을 적어줘야 한다는 것이다.
+
+```js
+extends base.pug
+
+block content
+    if errorMessage
+        span=errorMessage
+    form(method="POST", enctype="multipart/form-data")
+        label(for="video") Video File
+        input(type="file", accept="video/*", required, id="video", name="video")
+        input(placeholder="Title", required, type="text", name="title", maxlength=80)
+        input(placeholder="Description", required, type="text", name="description", minlength=20)
+        input(placeholder="Hashtags, separated by comma.", required, type="text", name="hashtags")
+        input(type="submit", value="Upload Video")
+```
+
+middleware로 가서 function을 만들어 준 후, router로 가서 middleware를 추가해준다.
+
+middlewares.js
+
+```js
+export const avatarUpload = multer({
+  dest: "uploads/avatars",
+  limits: 3000000,
+});
+
+export const videoUpload = multer({
+  dest: "uploads/videos",
+  limits: 10000000,
+});
+```
+
+**limits**은 attribute로 **Maximum File Size**이다.
+
+VideoRouterr.js
+
+```js
+...
+
+videoRouter
+  .route("/upload")
+  .all(protectorMiddleware)
+  .get(getUpload)
+  .post(videoUpload.single("video"), postUpload);
+...
+```
+
+위와 동일하게 이런식으로 해주면 되는데, 여기서 만약 설정해둔 file size보다 더 큰 것을 받으면 어떻게 될까?
+
+다음과 같은 오류를 확인할 수 있다.
+
+![Over-Size-Video](./screenshot/Over-size-Video.png)
+
+사실 오류도 이런 방식으로 뜨는 것이 아니라 사용자가 재대로 된 메세지를 볼 수 있도록 해줘야 한다.
+
+이 부분은 upload하는 것을 다 마무리 짓고 해보도록 하자.
+
+req.file에 video file정보가 담겨져 올 것이고, 그것의 path를 받아서 DB에 넣어주면 된다.
+
+위에서 한 것과 동일하게 하면 되므로 생략하도록 하겠습니다.
+
+처리를 한 후 비디오를 볼 수 있는 template를 만들어 주면 마무리가 되겠습니다.
+
+```pug
+extends base.pug
+
+block content
+    video(src="/" + video.fileUrl, controls)
+    div
+        p=video.description
+        small=video.createdAt
+    a(href=`${video.id}/edit`) Edit Video &rarr;
+    br
+    a(href=`${video.id}/delete`) Delete Video &rarr;
+```
+
+## 3. User Profile
+
+이제 마지막으로 User Profile을 만들어 보자.
+
+User Profile에 들어가면 해당 유저가 업로드한 영상들을 볼 수 있게 해줄 것이다.
+
+그럴라면 먼저 Video에 누가 올린 것인지에 대한 정보가 들어가 있어야 할것이다.
+
+**Video Model에 owner을 추가해 주자.**
+
+그리고 **User Model에는 Video List를 추가해주자.**
+
+### 3.1 Template & Controller
+
+먼저 template에 가서 다음 코드를 추가하자.
+
+    a(href=`users/${loggedInUser._id}`) My Profile
+
+그 다음 라우터에 가서 userRouter.js의 맨 마지막에 바인딩 해놓으면 될 것같다.
+
+userRouter.js
+
+```js
+
+...
+
+userRouter.get("/:id", see);
+```
+
+이제 Controller인 see를 만들면 되는데, profile을 확이하는 부분은 session으로 하는 것이 아니라 url에서 받아서 쓰는 것이 좋을 것이다. 왜나하면 **session으로 해버리면 다른 사람의 profile에 접근할 수 없기 때문**이다.
+
+**Profile Page는 Private Page가 아닌 Public Page로 만들어져야 한다.**
+
+```js
+export const see = async (req, res) => {
+	const { id } = req.params;
+	const user = await User.findById(id);
+	if(!user_ {
+		return res.status(404).render("404", {pageTitle: "User not found."});
+	}
+	return res. render("users/profile", {
+		pageTitle: `${user.name}`,
+		user
+	}
+}
+```
+
+### 3.2 Model ( Relation )
+
+이제 **Video** 와 **User**를 연결하는 작업을 해줄 것이다.
+
+mongoose나 mongoDB를 활용해 연결시키려면 **id**를 활용해야 한다.
+
+Why? **id는 각자 하나 밖에 없는 고유숫자이기 때문이다.**
+
+먼저, Video Schema에 'owner'를 추가해보자.
+
+    owner: { type: objectId }
+
+이와 같이 사용하면 인지하지 못한다. 왜냐하면 javaScript에서 지원해주지 않기 때문이다.
+
+우리는 mongoose를 활용해야 한다.
+
+또한 **reference를 넣어줘서 'mongoose'에게 owner에 id를 저장하겠다고 알려줘야 한다.**
+
+최종적으로 추가되는 코드는 다음과 같다.
+
+    owner: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "User" },
+
+> 여기서, **ref: "User"**에서 "User"에 들어가는 부분은 Model 이름이 들어가면 된다. 현재 나는 const User = mongoose.model("User", userSchema);로 선언해 놓은 상태이다.
+
+DB에서 확인을 해보자면 다음과 같다.
+
+![ObjectId-In-DB](./screenshot/ObjectId-In-DB.png)
+
+이제 이렇게 했으니 우리는 영상을 업로드하기 전에 사용자의 'id'를 controller를 이용해서 전송해주면 될 것이다. 최종 controller의 코드는 다음과 같다.
+
+```js
+export const postUpload = async (req, res) => {
+  const {
+    user: { _id },
+  } = req.session;
+  const { path: fileUrl } = req.file;
+  const { title, description, hashtags } = req.body;
+  try {
+    await Video.create({
+      title,
+      description,
+      fileUrl,
+      owner: _id,
+      hashtags: Video.formatHashtags(hashtags),
+    });
+    return res.redirect("/");
+  } catch (error) {
+    return res.status(400).render("upload", {
+      pageTitle: "Upload Video",
+      errorMessage: error._message,
+    });
+  }
+};
+```
+
+영상을 업로드 해보면 다음과 같이 DB에 저장되는 것을 확인할 수 있습니다.
+
+![mongoose-relation-DB](./screenshot/mongoose-relation-DB.png)
+
+### 3.3 User Profile 문제점 잡기
+
+문제점이 있는데 일단 다음 사진부터 확인해 보자.
+
+![mongoose-relation-problem](./screenshot/mongoose-relation-problem.png)
+
+만약 id가 다른 사람 즉, 업로드한 사람이 아닌 다른 사람이 이 영상을 edit하거나 delete할 수 있는 권한이 주어지면 안된다.
+
+그리고 유저가 봤을 때 누가 업로드 한 것인지 알 수 있도록 명시해줘야할 필요성이 보인다.
+
+먼저 업로드한 본인이 아닐때는 Button 자체를 안보이게 하자.
+
+localsMiddlewares를 이용하여 조건문을 활용하자.
+
+watch.pug
+
+```pug
+extends base.pug
+
+block content
+    video(src="/" + video.fileUrl, controls)
+    div
+        p=video.description
+        small=video.createdAt
+    if loggedInUser
+        if String(video.owner) === String(loggedInUser._id)
+            a(href=`${video.id}/edit`) Edit Video &rarr;
+            br
+            a(href=`${video.id}/delete`) Delete Video &rarr;
+```
+
+> 여기서, 주의할 점은 두 가지가 있다.
+>
+> 1. if loggedInUser를 쓰지 않을 경우 loggedInUser가 빈 껍데기 일 때 문제가 발생 할 여지가 있다.
+> 2. video.owner === loggedInUser.\_id 만약 이렇게 바로 비교한다면 원하는 화면이 출력되지 않을 것이다.
+
+먼저 1번을 살펴보면, **loggedInUser가 undefined로 되어있다면 오류가 날 것이다.** 예를 들어, 어떤 유저가 로그인도 하지 않은채로, URL을 직접 쳐서 들어왔다면 loggedInUser는 선언도 되어있지 않은 undefined일 것 입니다.
+
+그 다음으로 2번을 살펴보자면, **video객체 owner의 type은 'Object ID'인 반면에, loggedInUser.\_id는 'String'형태의 데이터**이므로 value와 type을 둘 다 검증하는 '==='을 사용하면 당연히 False의 결과값을 출력할 것이다. 그래서 String type으로 형변환을 한 후 비교를 진행하는 것이다.
+
+Button을 지워주는 것까진 된 것 같다.
+
+이제, 업로드한 사람을 프론트쪽에 명시해 주자.
+
+먼저 controller에서 template에 owner정보를 넘겨줘야 한다.
+
+VideoController.js
+
+```js
+export const watch = async (req, res) => {
+  const { id } = req.params;
+  const video = await Video.findById(id);
+  const owner = await User.findById(video.owner);
+  if (!video) {
+    return res.render("404", { pageTitle: "Video not found." });
+  }
+  return res.render("watch", { pageTitle: video.title, video, owner });
+};
+```
+
+그 다음 template에서 구현해 놓는 것은 매우 간단하므로 생략하도록 하곘다.
+
+거의 다 손 봐준것 같은데, 이제 코드를 좀 더 깔끔하게 만들어보자.
+
+사실 'mongoose'가 지원하는 기능중에 **Model에서 Reference를 준 속성으로 연결된 다른 Model을 사용할 수 있게 해주는 기능**이 있다.
+
+바로 **'populate'기능**이다.
+
+```js
+export const watch = async (req, res) => {
+  const { id } = req.params;
+  const video = await Video.findById(id).populate("owner");
+  if (!video) {
+    return res.render("404", { pageTitle: "Video not found." });
+  }
+  return res.render("watch", { pageTitle: video.title, video, owner });
+};
+```
+
+다음과 같이 했을 때 어떻게 나오는지 확인해보자.
+
+먼저 이것을 하기전에는 출력이 다음과 같다.
+
+![display-not-used-populate](./screenshot/display-not-used-populate.png)
+
+'populate'를 사용한 후 출력은 다음과 같습니다.
+
+![display-used-populate](./screenshot/display-used-populate.png)
+
+여기서 보면 'populate'는 해당 부분만 바꿔서 return 해주는 것이 아니라, 특정 부분을 실제 데이터로 바꿔서 기존 데이터와 같이 return 해주는 것을 확인할 수 있습니다.
+
+이것을 응용해서 불필요한 코드를 제거할 수도 있게 됐습니다.
+
+이것에 맞춰서 template을 수정하면 됩니다. 간단하므로 넘어가겠습니다.
+
+이것이 바로 **Mongoose Relationship**이다.
+
+### 3.4 마무리 짓기
+
+이제 마지막으로 user profile에 갔을 때 해당 유저가 업로드한 동영상을 볼 수 있는 기능을 추가하면서 마무리 짓겠다.
+
+userController.js
+
+```js
+export const see = async (req, res) => {
+  const { id } = req.params;
+  const user = await User.findById(id);
+  if (!user) {
+    return res.status(404).render("404");
+  }
+  const videos = await Video.find({ owner: user._id });
+  return res.render("users/profile", {
+    pageTitle: `${user.name}`,
+    user,
+    videos,
+  });
+};
+```
+
+template에서 하는것은 Mixin을 활용해주면 된다.
+
+그리고 User Model에 본인이 올린 video정보들을 넣어주는 Video Array를 추가해줄 필요가 있다.
+
+    videos: [{ type: mongoose.Schema.Types.ObjectId, ref: "Video" }]
+
+'videos'는 Video Model에 연결된 'ObjectId'로 구성된 Array이다.
+
+이제 User에 Video Array가 있으니, 새로 업로드하는 영상의 'id'를 'user model'에 저장해주기 위해 다음과 같이 해주면 된다.
+
+```js
+export const postUpload = async (req, res) => {
+  const {
+    user: { _id },
+  } = req.session;
+  const { path: fileUrl } = req.file;
+  const { title, description, hashtags } = req.body;
+  try {
+    const newVideo = await Video.create({
+      title,
+      description,
+      fileUrl,
+      owner: _id,
+      hashtags: Video.formatHashtags(hashtags),
+    });
+    const user = await User.findById(_id);
+    user.videos.push(newVideo._id);
+    user.save();
+    return res.redirect("/");
+  } catch (error) {
+    return res.status(400).render("upload", {
+      pageTitle: "Upload Video",
+      errorMessage: error._message,
+    });
+  }
+};
+```
+
+이와 같이 하고 결과를 확인할 때 다음과 같이 나온다.
+
+![postUpload-VideoArray](./screenshot/postUpload-VideoArray.png)
+
+**'video array'에 요소를 추가하기 위해 push()를 사용**했습니다.
+
+여기서 user.save()를 사용하는데, 문제가 있다. User Model을 보면 우리는 save에 'pre'로 hook를 걸어 놓았다.
+
+```js
+userSchema.pre("save", async function () {
+  this.password = await bcrypt.hash(this.password, 5);
+});
+```
+
+만약 이렇게 위와같이 controller를하고 비디오가 업로드 된다면 업로드할 때 마다 비밀번호가 'hash'될 것이다.
+
+다음과 같이 해서 해결하면 된다.
+
+```js
+userSchema.pre("save", async function () {
+  if (this.isModified("password")) {
+    this.password = await bcrypt.hash(this.password, 5);
+  }
+});
+```
+
+'this'는 이전에도 말했지만 저장하려는 Model을 가르킨다. **isModified()** 는 수정이 되었으면 True를 return해주고, 수정을 하지 않았으면 False를 return해준다. 그렇다면, 수정이 된지 안된지는 어떻게 아는것일까? **해당 값이 DB에 기록된 값과 비교해서 변경이 된지 안된지**를 확인한다.
+
+마지막으로 getEdit이나, postEdit, deleteVideo등에서는 영상 주인이외에는 해당 페이지로 접근하는 것을 막아줘야 할 것이다.
+
+다음과 같은 코드를 추가하면 된다.
+
+```js
+...
+  if (String(video.owner) !== String(_id)) {
+    return res.status(403).redirect("/");
+  }
+...
+```
