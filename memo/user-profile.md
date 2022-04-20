@@ -1019,6 +1019,21 @@ export const watch = async (req, res) => {
 
 이것이 바로 **Mongoose Relationship**이다.
 
+> Profile 페이지를 생각해보면, 구현할 기능은 유저가 올린 모든 동영상을 볼 수 있는 페이지를 구현하는 것이 목표다. 그때, 동영상에는 유저 정도도 떴으면 좋겠다.
+>
+> 즉, User를 가져오는 과정에서 videos array를 populate 하는데 거기서 한번 더 owner를 populate해야되는 상황이다. 그것은 다음과 같이 코드가 이루어 진다.
+
+```js
+// Double Populate
+const user = await User.findById(id).populate({
+  path: "videos",
+  populate: {
+    path: "owner",
+    model: "User",
+  },
+});
+```
+
 ### 3.4 마무리 짓기
 
 이제 마지막으로 user profile에 갔을 때 해당 유저가 업로드한 동영상을 볼 수 있는 기능을 추가하면서 마무리 짓겠다.
