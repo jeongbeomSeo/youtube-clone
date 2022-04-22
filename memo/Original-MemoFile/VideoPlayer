@@ -1,0 +1,631 @@
+이번 강의에선 비디오 플레이어를 HTML, CSS, JavaScript를 사용하여 만들어 볼것이다.
+
+비디어 플레이어 코드를 검색 화면에 로드하는 것이 말이 될까? 절대 아니다.
+
+비디오를 업로드 할 때, 우리는 사용자가 파일을 업로드하거나 비디오 녹화를 해서 업로드 할 수 있도록 만들것이다.
+
+지금부터 우리가 할 건 다른 JavaScript 파일을 만들어서, 그 다른 JavaScript파일을 다른 페이지에 포함시켜 줄 것이다.
+
+예를 들어, 홈페이지에서는 어떤 JavaScript도 로드하지 않을 것이다.
+
+비디오 페이지에 가면 로드 해주는것이다.
+
+비디오 페이지에 가면 그 때 비디오 플레이어 코드를 로드해주는 것이다.
+
+비디오 업로드 페이지에 가면 비디오 녹화 코드를 로드해줄 것이다.
+
+현재 우리의 webpack은 하나의 entry point만 가지고 있는데 이 부분을 수정해줘야 한다.
+
+client -> js -> videoPlayer.js 라는 새로운 파일을 만들어 주자.
+
+대충 console.log("Video Player");를 적어준 후,
+
+webpack config의 entry를 바꿔주자.
+
+module.exports = {
+  entry: {
+    main: "./src/client/js/main.js",
+    videoPlayer: "./src/client/js/videoPlayer.js",
+  },
+  mode: "development",
+  watch: true,
+  plugins: [
+    new MiniCssExtractPlugin({
+      filename: "css/styles.css",
+    }),
+  ],
+  output: {
+    filename: "js/main.js",
+    path: path.resolve(__dirname, "assets"),
+    clean: true,
+  },
+  ....
+  
+  
+  
+entry부분을 위와 같이 바꿔즌 것이다.
+
+이렇게 하고 보니 output에도 이름이 있다.
+
+모든 것들이 main.js로 변할텐데 우린 그걸 원치않다.
+
+만약 이상태로 webpack을 재시작한다면 다음과 같은 오류가 나온다.
+
+그리고 두개의 main 파일이 생성될 것이다.
+
+스크린샷, 2022-04-20 17-21-14.png
+
+이 오류는 여러 코드가 같은 파일 이름으로 asset을 생성하고 있다고 나와 있다는 것이다.
+
+여기서 우리는 webpack에서 제공하는 변수 사용방식을 이용하면 된다.
+
+
+  output: {
+    filename: "js/[name].js",
+    path: path.resolve(__dirname, "assets"),
+    clean: true,
+  },
+
+
+assets폴더에도 main.js와 videoPlayer.js둘 다 잘 생성된 것을 확인할 수 있다.
+
+이제 videoPlayer.js 를 비디오 플레이어가 필요한 비디오 페이지에 로드해줘야 한다.
+
+현재 base.pug를 가면 다음과 같이 되어 있는데, 그것을 다음과 같이 수정하자.
+
+doctype html
+html(lang="ko")
+    head
+        title #{pageTitle} | #{siteName}
+        link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css")
+        link(rel="stylesheet", href="/static/css/styles.css")
+    body
+        include partials/header
+        main
+            block content
+    include partials/footer.pug
+    script(src="/static/js/main.js")
+    
+여기서 script(src ..) 부분을 bloack scritps로 수정하자.
+
+이렇게 함으로써 watch.pug에서 다음과 같이 할 수 있다.
+
+...
+block scripts 
+    script(src="/static/js/videoPlayer.js")
+    
+여기서 static/js를 쓴 이유는, 우리의 서버가 /static을 사용하도록 설정되어 있고, assets 폴더에 접근 권한을 주기 위해서이다. 
+
+우리가 static url로 가면, 유저가 assets 폴더를 접근할 수 있는 권한을 줄거다.
+
+무슨 차이냐? 다음을 봐보자.
+
+현재 나는 client -> js 에 main.js 와 videoPlayer.js가 있는데 다음과 같이 해줬다.
+
+main.js
+
+import "../scss/styles.scss";
+console.log("main");
+
+videoPlayer.js
+
+console.log("Video Player");
+
+이렇게하고 Video Detail Page로 가면 다음과 같이 console창에서 출력이 된다.
+
+스크린샷, 2022-04-20 17-47-43.png
+
+이제 Video 만드는데에 집중해보자.
+
+>	 다른 부분은 주석 처리해서 집중해보자.
+
+먼저 HTML부터 mark up 해주도록 하자.
+
+기본적으로 플레이어에 필요할 것 같은 모든 html input과 button을 만들어 볼 것이다.
+
+    video(src="/" + video.fileUrl, controls)
+    div 
+        button#play Play 
+        button#mute Mute 
+        span#time 00:00/00:00
+        input(type="range", step="0.1" min="0" max="1")#volume
+        
+요런식으로 해서 이제 이 id들을 JavaScript에 넣어주면 된다.
+
+client-js-videoPlayer.js로 가서 사용하면된다.
+
+videoPlayer.js 
+
+const video = document.querySelector("video");
+const play = document.getElementById("play");
+const mute = document.getElementById("mute");
+const time = document.getElementById("time");
+const volume = document.getElementById("volume");
+
+console.log(video, play, mute, time, volume);
+
+다음의 출력이 정상적으로 작동한다면 다음과 같이 될것이다.
+
+스크린샷, 2022-04-20 18-06-57.png
+
+중간 코드를 살펴보자면 다음과 같다.
+
+const video = document.querySelector("video");
+const playBtn = document.getElementById("play");
+const muteBtn = document.getElementById("mute");
+const time = document.getElementById("time");
+const volume = document.getElementById("volume");
+
+const handlePlayClick = (e) => {
+  if (video.paused) {
+    video.play();
+  } else {
+    video.pause();
+  }
+};
+
+const handlePause = () => (playBtn.innerText = "Play");
+const handlePlay = () => (playBtn.innerText = "Pause");
+
+const handleMute = (e) => {};
+
+playBtn.addEventListener("click", handlePlayClick);
+muteBtn.addEventListener("click", handleMute);
+video.addEventListener("pause", handlePause);
+video.addEventListener("play", handlePlay);
+
+이렇게 코드를 올리고 코드 분석 위주로 진행해보자.
+
+먼저 위코드에서 playBtn으로 바꾼 것은 좀 더 정확하게 명시해 줌으로써 모호함을 없애면서 나중에 변수가 겹치지 않도록 방지하기 위함이 있다.
+
+handlePause 와 handlePlay 변수의 경우 버튼을 클릭하면 발생시키면 되니깐 handlePlayClick에 넣어줘도 되는거 아닌가? 라고 생각할 수 있다. 
+
+이 경우 버튼만을 이용해서 동영상을 재생 또는 정지 하는 경우에만 적용되므로 문제가 있다. 그래서 위와같이 나눠준 것이다.
+
+
+요번엔 Mute버튼을 다뤄볼 것인데, 이부분에서 신경써야 될 점은 Mute버튼을 눌러서 음소거가 되는 순간 볼륨 바(Range)도 움직여야 되는것에 신경써야 한다.
+
+먼저 바를 신경쓰지 않고 버튼만을 코딩했을 경우 다음과 같이 된다.
+
+const handleMute = (e) => {
+  if(video.muted) {
+    video.muted = false;
+  } else {
+    video.muted = true;
+  }
+  muteBtn.innerText = video.muted ? "Unmute" : "Mute";
+};
+
+함수만 적었을 경우 이와 같이 코딩이 될 것이다.
+
+>	여기서 주목해볼 점은 맨 밑에 삼항 연산자가 굉장히 편해보인다. 조건문을 다 거치고 나와서 마무리 단계에서 삼항 연산자를 사용하여 변경해주는 방식. 이 방식은 위에서 사용한 재생 버튼과 video 재생과의 관계에서도 사용할 수 있을것같다.
+
+const handlePlayClick = (e) => {
+  if (video.paused) {
+    video.play();
+  } else {
+    video.pause();
+  }
+  playBtn.video.paused ? "Play" : "Paused";
+};
+
+이와 같이 한줄을 추가함으로써 4줄의 코드가 생략된다.
+
+이제 Range바를 만들어 줄 것인데, 두가지를 신경써 줘야 한다.
+
+첫번째는 Mute를 눌렀을 때 Range Bar Value 값이 0으로 가면 된다.
+
+두번째는	unMute를 눌렀을 때 Range Bar Value 값이 이전 상태로 돌아가야 한다.
+
+먼저 기본적으로 input range의 기본 value값은 0.5이다.
+
+그래서 먼저 JavaScript에서 video.volume = 0.5;를 적어놓고 시작하자.
+
+range가 변화하는 것을 감지해야 되는데 그때 사용하는 eventListener가 "change"이다.
+
+여기서 말하는 변화는 드래그를 하고 있는 동안이 아닌 드래그를 다 하고 놓았을 때 발생한다.
+
+그러면 이것은 우리가 생각하는 변화가 아니다. 우리는 실시간으로 변화에 따라가는 것을 원한다.
+
+그래서 사용하는것이 "input"이다.
+
+다음과 같이 코드가 짜질 것이다.
+
+const handleVolumeChange = (event) => {
+  const {
+    target: { value },
+  } = event;
+  video.volume = value;
+};
+
+volumeRange.addEventListener("input", handleVolumeChange);
+
+그리고 추가해야 될 부분은 Muted인 상태에서 볼륨바를 움직이면 unMuted로 되어야 된다.
+
+그리고 Muted를 해체했을 때 이전 상태로 돌아가기 위해서 global value를 설정해준다. 
+
+최종 코드는 다음과 같다.
+
+const video = document.querySelector("video");
+const playBtn = document.getElementById("play");
+const muteBtn = document.getElementById("mute");
+const time = document.getElementById("time");
+const volumeRange = document.getElementById("volume");
+
+let volumeValue = 0.5;
+video.volume = volumeValue;
+
+const handlePlayClick = (e) => {
+  if (video.paused) {
+    video.play();
+  } else {
+    video.pause();
+  }
+  playBtn.innerText = video.paused ? "Play" : "Paused";
+};
+
+const handleMuteClick = (e) => {
+  if (video.muted) {
+    video.muted = false;
+  } else {
+    video.muted = true;
+  }
+  muteBtn.innerText = video.muted ? "Unmute" : "Mute";
+  volumeRange.value = video.muted ? 0 : volumeValue;
+};
+
+const handleVolumeChange = (event) => {
+  const {
+    target: { value },
+  } = event;
+  if (video.muted) {
+    video.muted = false;
+    muteBtn.innerText = "Mute";
+  }
+  volumeValue = value;
+  video.volume = value;
+};
+
+playBtn.addEventListener("click", handlePlayClick);
+muteBtn.addEventListener("click", handleMuteClick);
+volumeRange.addEventListener("input", handleVolumeChange);
+
+이제 시간부분을 해결할 것인데 eventListner로 쓸만한 것은 loaded meta data event라는 녀석이다.
+
+loadedmetadata인데 이녀석은 meta data가 로드 될 때 실행이 될것이다.
+
+meta data는 무엇인가? meta data는 비디오를 제외한 모든 것을 말한다.
+
+예를 들어, 비디오의 시간이라든가 가로, 세로 크기 등 움직이는 이미지들을 제외한 모든 엑스트라를 말한다.
+
+현재 PUG에는 span#time 00:00/00:00 이와같이 써져있는데 이것을 나눠서 쓸 필요가 있다. 
+
+        div 
+            span#currentTime 00:00
+            span    / 
+            span#totalTime 00:00
+            
+이와 해주고 javascript에서 손 보면 되겠다.
+
+const handleLoadedMetadata = () => {
+  totalTime.innerText = video.duration;
+}
+video.addEventListener("loadedmetadata", handleLoadedMetadata);
+
+이와 같이만 해줘도 totalTime이 적용되는데 그이유는 이 function이 호출해서 비디오의 길이를 알 수 있게 해주기 때문이다.
+
+그러므로 이 function이 실행되기 전까지는, 우린 비디오의 총 시간을 알 수 없다.
+
+기다리고 이 event가 발생되고 이 function이 호출되면 이 event가 발생 됐을 때 비디오의 총 시간을 알 수 있다는 것이다.
+
+그리고 currentTime을 위해서 다른 event를 쓸 것인데 그것이 timeupdate이다. currnetTime 속성이 변경되는 시점에 발생합니다.
+
+const handleTimeUpdate = () => {
+  currentTime.innerText = Math.floor(video.currentTime);
+};
+video.addEventListner("timeupdate", handleTimeUpdate);
+
+
+이제 Time Formatting을 살펴볼것인데, 알아둬야할 것이 있다.
+
+data Construtor가 1970년 1월 1일 09:00 시점을 이후로 date를 만들어 주는 것을 알아두자.
+(좀 더 서칭 필요)
+
+이 내용이 왜 필요한가?
+
+지금 우리가 할것은, 제로타임으로부터 29초 뒤의 date를 만들려고 하는 것이다.
+
+이때 사용하는 함수들은 new Date(), toISOString(), substring()
+
+new Date를 사용할 때 신경써야 될 것은 시간의 단위가 ms이기 때문에 안에 매개변수에 초단위로 넣고 싶으면 n * 1000을 해줘야 한다는 것이다.
+
+또한, new Date의 기준 시간은 위에서 말했다.
+
+toISOString()은 시간을 09:00:00로 되어 있던것을 00:00:00으로 바꿔준다. ... (서칭 필요)
+
+substring()은 원하는 부분부터 원하는 만큼 String을 짤라주는 함수다.
+
+이런식으로 하는 이유는 우리가 원하는 포맷을 가진 data를 생성하는 것 뿐이다.
+
+const formatTime = (seconds) => {
+  new Date(seconds * 1000).toISOString().substring(11, 8);
+};
+
+
+그런다음 이와 같이 적용시키면 된다.
+
+const handleLoadedMetadata = () => {
+  totalTime.innerText = formatTime(Math.floor(video.duration));
+};
+
+const handleTimeUpdate = () => {
+  currentTime.innerText = formatTime(Math.floor(video.currentTime));
+};
+
+
+이제 마지막으로 우리의 비디오 시간을 업데이트해주는 기능을 만들어 보자.
+
+먼저, watch.put에 또 다른 div 추가.
+
+div 
+    input(type="range", step="1" value="0" min="0")#timeline
+
+이와 같이 해주고 javaScript에서 사용하면 된다.
+
+여기서 신경써줘야 할 것은 range input의 step에는 어느 크기 정도로 넘길지 써주면 된다.
+
+또한 min값은 주지만 max값을 안 준 이유는 max는 동영상 길이가 될 것이기 때문이다.
+
+이제 javascript에서 가져와주고 "loadedmetadata" event가 일어날 때 발생하는 function인 handleLoadedMetadata에서 timeline의 maximum value를 세팅해 줄 것이다.
+
+왜냐면 handleLoadedMetadata에서 동영상 길이를 알고있기 때문이다.
+
+const handleLoadedMetadata = () => {
+  totalTime.innerText = formatTime(Math.floor(video.duration));
+  timeline.max = Math.floor(video.duration);
+};
+
+이제 비디오 시간이 변화 할 때 처리만 해주면 되는데 사실 우리는 해당 event를 사용하고 있다.
+
+
+"timeupdate" event가 일어날 때 발생하는 function인 handleTimeUpdate에서 말이다.
+
+const handleTimeUpdate = () => {
+  currentTime.innerText = formatTime(Math.floor(video.currentTime));
+  timeline.value = Math.floor(video.currentTime);
+};
+
+이제 여기서 반대로인 경우에도 처리를 해줘야하는데, 현재 동영상이 기본적으로 가지고있는 bar를 움직이면 내가 만든 bar도 동영상 시간에 맞춰서 이동한다. 하지만, 내가 만든 bar를 움직이면 동영상 시간에는 변화가 없다.
+
+볼륨에서도 봐봤지만, 내가 클릭하고 움직일때 마다 처리해주는 event는 무엇인가?
+
+"input"이였다.
+
+이것을 타임라인에도 똑같이 하면된다.
+
+const handleTimelineChange = (event) => {
+  const {
+    target: { value },
+  } = event;
+  video.currentTime = value;
+};
+
+이제 마지막으로 video에서 controls를 지우면 CSS로 나머지 적용시키면 될것같다.
+
+CSS를 하기 앞서, fullScreen 버튼을 만들어주자.
+
+div 
+    button#fullScreen Enter Full Screen
+
+이걸 pug에 추가하고 다음과 같이 해주자.
+
+const handleFullScreen = () => {
+  
+}
+fullScreenBtn.addEventListener("click", handleFullScreen);
+
+사실 풀스크린으로 할 때 video만 하는 것이 아니라 video와 모든 버튼들이 풀스크린으로 되어야 한다.
+
+div#videoContainer
+    video(src="/" + video.fileUrl)
+    div 
+        button#play Play 
+        button#mute Mute 
+        input(type="range", step="0.1" min="0" max="1")#volume
+        div 
+            span#currentTime 00:00
+            span    / 
+            span#totalTime 00:00
+        div 
+            input(type="range", step="1" value="0" min="0")#timeline
+        div 
+            button#fullScreen Enter Full Screen
+     
+이와 같이 넣어주자.
+
+javascript에서 가져오고 다음과 같이 해주면 된다.
+
+const handleFullScreen = () => {
+  videoContainer.requestFullscreen();
+}
+
+아직 스타일링이 안되어서 원하는 화면은 아닐지 모르지만 일단 비디오와 버튼들이 전체화면이 되었다.
+
+여기서 해결해야 될 것들이 있다.
+
+1. 전체화면이 되었을 떄 Exit Full Screen으로 버튼의 innerText변경
+
+2. 전체화면일 때 버튼을 누르면 전체화면에서 원래 화면으로 돌아가기.
+
+1번의 경우 기존에 했던 방식과 똑같이 하면된다.
+
+2번의 경우 현재 화면이 fullscreen인지 알려주는 document.fullscreenElement를 사용하면 된다.
+
+   
+이것의 경우 fullscreenelement가 있으면 그것을 반환 아니면 null값을 반환한다.
+
+const handleFullScreen = () => {
+  const fullscreen = document.fullscreenElement;
+  if (fullscreen) {
+    document.exitFullscreen();
+    fullScreenBtn.innerText = "Enter Full Screen";
+  } else {
+    videoContainer.requestFullscreen();
+    fullScreenBtn.innerText = "Exit Full Screen";
+  }
+};
+
+해당 코드가 최종 코드가 되겠다.
+
+
+여러 동영상을 보면 마우스 커서를 비디오 위로 옮기면 컨트롤러를 보여주는 기능이 있다.
+
+그것을 구현해보자.
+
+먼저 watch.pug를 다시한번 봐보자.
+
+extends base.pug
+
+block content
+    div#videoContainer
+        video(src="/" + video.fileUrl)
+        div#videoControls
+            button#play Play 
+            button#mute Mute 
+            input(type="range", step="0.1" min="0" max="1")#volume
+            div 
+                span#currentTime 00:00
+                span    / 
+                span#totalTime 00:00
+            div 
+                input(type="range", step="1" value="0" min="0")#timeline
+            div 
+                button#fullScreen Enter Full Screen
+                
+javascript는 다음과 같다.
+
+const handleMouseMove = () => {
+  videoControls.classList.add("showing");
+}
+
+const handleMouseLeave = () => {
+  setTimeout(() => {
+    videoControls.classList.remove("showing");
+  }, 3000);
+};
+video.addEventListener("mousemove", handleMouseMove);
+video.addEventListener("mouseleave", handleMouseLeave);
+
+여기서, controls에 class를 추가한 것은 나중에 css로 구현해서 표현하기 위함이다.
+ 
+또한, setTimeout을 쓴 이유는 넷플릭스나 유튜브 동영상을 보면 마우스 커서가 동영상 밖으로 나간다고 해서 controls들이 바로 사라지는 것이 아니라, 조금 있다가 사라지는 것을 볼 수 있기 때문이다. 
+
+하지만, 여기까지 구현하고 보니 문제가 발생한다. 마우스가 동영상 안에 들어갔다가 나갔다가 3초도 안되기 전에 다시 동영상에 들어가면 controls들이 남아 있어야 되는데 결국 처음 3초가 지나면 사라진다. 문제점을 해결해야 할 것 같다.
+
+첫번째로 해야할건, timeout의 return type을 이해해야한다.
+
+const handleMouseLeave = () => {
+  const id = setTimeout(() => {
+    videoControls.classList.remove("showing");
+  }, 3000);
+	console.log(id);
+};
+
+이것의 결과는 무엇일까?
+
+스크린샷, 2022-04-21 20-46-24.png
+
+39라고 뜬다. 이것을 clearTimeout()에 넣어주면 된다.
+
+이것을 handleMouseMove() 안에서도 쓸 수 있도록 해줘야 한다. 어떻게 해줘야 할 것인가?
+
+global 변수를 사용하면 된다.
+
+let controlsTimeout = null;
+
+const handleMouseMove = () => {
+  if(controlsTimeout) {
+    clearTimeout(controlsTimeout);
+    controlsTimeout = null;
+  }
+  videoControls.classList.add("showing");
+};
+
+const handleMouseLeave = () => {
+  controlsTimeout = setTimeout(() => {
+    videoControls.classList.remove("showing");
+  }, 3000);
+};
+
+이와 같이 처리하면 된다.
+
+이제 우리가 해야할 것은 마우스가 멈추는 것을 감지하는 것이다.
+
+동영상 안에 마우스가 가만히 있을 때 어느정도 시간이 지나면 controls이 사라지는 기능을 구현해보자.
+
+mousestop이라는 event는 없기 때문에 timeout과 cleartimeout을 사용하여 구현한다.
+
+일단, 마우스가 움직일 때, timeout을 시작해야한다. 코드의 중복성도 해결할 겸 다음과 같이 코드가 되어있다.
+
+const hideControls = () => {
+  videoControls.classList.remove("showing");
+};
+
+const handleMouseMove = () => {
+  if (controlsTimeout) {
+    clearTimeout(controlsTimeout);
+    controlsTimeout = null;
+  }
+  videoControls.classList.add("showing");
+  setTimeout(hideControls, 3000);
+};
+
+const handleMouseLeave = () => {
+  controlsTimeout = setTimeout(hideControls, 3000);
+};
+
+이제 timeout의 id를 받고 clear 해주자. global 변수인 let controlsMovementTimeout = null; 선언.
+
+const handleMouseMove = () => {
+  if (controlsTimeout) {
+    clearTimeout(controlsTimeout);
+    controlsTimeout = null;
+  }
+  if(controlsMovementTimeout) {
+    clearTimeout(controlsMovementTimeout);
+    controlsMovementTimeout = null;
+  }
+  videoControls.classList.add("showing");
+  controlsMovementTimeout = setTimeout(hideControls, 3000);
+};
+
+이와 같이 되었다.
+
+여기서 좀만 더 생각해보자. 위의 if 는 무슨역할을 하면 아래 if는 무슨 역할을 하고 있는 것일까?
+
+첫번째 if는 해당 조건때문에 필요한거였다.
+
+마우스가 동영상 안에있다가 나갔을 때 3초뒤에 controls가 사라지게 만들었는데 그 시간 사이에 마우스가 다시 들어오면 timeout이 취소가 되게끔 하기 위해 구현해놓았다.
+
+그렇다면 두번째 if는 무엇때문인가?
+
+마우스가 동영상내에서 움직이다가 멈췄을 때 contorls가 사라지도록 하기 위해서이다. 즉 이 말은 (동영상내에서) "움직이면" controls는 사라지지 않는다. 라는 것과 같은 말인 것 같다.
+
+위에 첫번째 if문은 두번째 if문 조건을 채워주지 못하지만 두번째 if문은 첫번째 if문 조건을 채워주고 있는 것이다.
+
+마지막 움직인 시점에서 마우스가 멈추든 나가있든 똑같이 봐도 무방한 것이다.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

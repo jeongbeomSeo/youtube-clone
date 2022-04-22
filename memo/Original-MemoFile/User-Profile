@@ -1,0 +1,1251 @@
+이 부분에선 file에 관련된 것을 주로 배우게 될것이다.
+
+form url controller를 연습해 보게 될 것이다.
+
+template를 바꿔서 edit-profile로 갈 수 있도록 만들어 주고나서 router와 controller를 조정해준다.
+
+edit 에는 get 과 post가 필요할 것이다.
+
+route() 메소드를 사용해서 router를 수정해주고 controller로가서 getEdit와 postEdit를 만들어주도록 한다.
+
+form 에 대해서 하나만 정리하자면
+form(method="POST") 이와같이 action을 적지 않으면 같은 URL로 POST방식으로 보내게 될 것이다.
+
+template를 보자면 
+
+edit-profile.pug
+
+extends base
+
+block content 
+  form(method="POST")
+    input(placeholder="Name", name="name", tpye="text", required, value=loggedInUser.name)
+    input(placeholder="Email", name="email", tpye="email", required, value=loggedInUser.email)
+    input(placeholder="Username", name="username", tpye="text", required, value=loggedInUser.username)
+    input(placeholder="Location", name="location", tpye="text", required, value=loggedInUser.location)
+    input(type="submit", value="Update Profile")
+
+
+password수정하는 부분이 빠져있는 것을 확일할 수 있다.
+
+이것은 소셜 로그인 기능이 추가되면서 비밀번호가 있는 사용자가 있고, 없는 사용자가 있어서 그렇다.
+
+또한 value를 보면 loggedInUser를 쓰고잇는 것을 볼 수 있는데, 이것은 req.locals에 담아둔 변수는 어느 template를 가든간에 전역 변수로써 사용할 수 있기 때문에 이와 같이 사용 가능한 것이다.(localsMiddleware)
+
+문제는 이와같이 했을 경우 로그인을 하지 않은 상태에서 이 URL로 바로 이동하면 loggedInUser(property)에 담겨져 잇는 것이 없어서 undefined로 되어 있다.
+
+즉 두가지 문제점을 해결해야한다.
+
+하나는 loggedInUser에 접근하려는데 로그인 되어 있지 않으면 생기는 에러
+두번째는 로그인 되어 있지 않은 사람들은 이 URL로 이동할 수 없어야 한다. redirect를 해줘야 한다.
+
+참고로 localsMiddleware에 다음과 같이하면 해결이 되긴 한다.
+
+res.locals.loggedInUser = req.session.user || {};
+
+누구든 접근할 수 있게 된다. 하지만 이것은 문제가 해결되지는 않는다.
+
+로그인하지 않은 사람들이, 우리가 보호하려는 페이지에 가는걸 막는것은 localsMiddleware를 이용해서 구현하면 된다.
+
+구현할 기능은 사용자가 로그인 되어 있지 않은걸 확인하면, 로그인 페이지로 redirect하게 하고, 사용자가 로그인되어 있다면 request를 계속하도록 하면 된다.
+
+export const protectorMiddleware = (req, res, next) => {
+  if (req.session.loggedIn) {
+    next();
+  } else {
+    return res.redirect("/login");
+  }
+};
+
+그리고 또 하나 필요한 것이 로그인 되어 있는 사람들은 로그인 페이지로 가지 않게 해둬야 한다.
+
+export const publicOnlyMiddleware = (req, res, next) => {
+  if (!req.session.loggedIn) {
+    return next();
+  } else {
+    return res.redirect("/");
+  }
+};
+
+이렇게 하고 router.js를 가서 필요한 경로에 middleware를 추가해주면 된다. 예를 들어, logOut의 경우 loggedIn이 True인 경우에만 갈 수 있어야 한다.
+
+userRouter.get("/logout", protectorMiddleware, logout);
+
+route메소드에는 다음과 같이 쓸 수 있다.
+
+userRouter
+  .route("/edit")
+  .get(protectorMiddleware, getEdit)
+  .post(protectorMiddleware, postEdit);
+  
+하지만 express기능인 all()을 사용하면 반복할 필요가 없다.
+
+middleware를 설정해야되는 것은 Edit Page나 Login, Join, Logout, Video 에서 Edit 이나 Delete 정도가 되겠다.
+
+다음 postEdit를 손봐줄 것인데, 이것부터 먼저 봐보자.
+
+  const {
+    session: {
+      user: { id },
+    },
+  } = req;
+  
+이것은 const id = req.session.user.id;와 동일하다.
+
+무슨 방법이 더 나을 것인가 하면, 위에 방법으로 할 시 다음과 같은 것도 할 수 있다.
+
+  const {
+    session: {
+      user: { id },
+    },
+    body: { name, email, username, location },
+  } = req;
+  
+이것은 다음과 같다.
+
+const id = req.session.user.id;
+
+const { name, email, username, location } = req.body;
+
+위에 방식을 사용해서 다음과 같이 코드를 짜보았다.
+
+export const postEdit = (req, res) => {
+  const {
+    session: {
+      user: { _id },
+    },
+    body: { name, email, username, location },
+  } = req;
+  await User.findByIdAndUpdate(_id, {
+    name,
+    email,
+    username,
+    location,
+  });
+  return res.render("edit-profile");
+};
+
+여기서 눈여겨 봐야 할 것은 id 말고 _id를 써줬다는 것에 유의하자. mongoDB에 들어가는 primary ID의 경우 key값이 id가 아닌 _id로 들어가는 것이다.
+
+여기까지 하면 DB에 있는 데이터는 수정된다. 하지만 프론트쪽에선 수정된 것을 확인되어 지지 않을것이다.
+
+Edit-Profile-NotChanged.gif
+
+하지만 DB안에 내용은 수정이 되어 있습니다.
+
+스크린샷, 2022-02-08 17-07-33.png
+
+이것은 생각해보면, edit-profile에서 value값을 무엇을 입력해 놨는지 부터 생각해보면 됩니다.
+
+loggedInUser의 값을 입력해 놨습니다. 
+
+edit.profile.pug
+
+extends base
+
+block content 
+  form(method="POST")
+    input(placeholder="Name", name="name", tpye="text", required, value=loggedInUser.name)
+    input(placeholder="Email", name="email", tpye="email", required, value=loggedInUser.email)
+    input(placeholder="Username", name="username", tpye="text", required, value=loggedInUser.username)
+    input(placeholder="Location", name="location", tpye="text", required, value=loggedInUser.location)
+    input(type="submit", value="Update Profile")
+    
+그러면 loggedInUser가 언제 생성된건지 생각해보자. 
+이것은 localsMiddleware에서 생성된다.
+
+loggedInUser를 req.session.user이라고 정의하고 있다.
+
+middlewares.js
+
+export const localsMiddleware = (req, res, next) => {
+  res.locals.siteName = "Wetube";
+  res.locals.loggedIn = Boolean(req.session.loggedIn);
+  res.locals.loggedInUser = req.session.user || {};
+  next();
+};
+
+...
+
+그럼 req.session.user는 언제 생성되는 것일까?
+
+바로 로그인할 때입니다.
+
+즉, user는 업데이트 했지만, session이 업데이트 되지 않아서 프론트쪽에서 수정된 내용을 확인하지 못한 것 입니다.
+
+DB에서는 user를 업데이트를 하긴 했지만, session은 DB와 연결되어 있지 않습니다.
+
+방법이 두가지가 있습니다.
+
+먼저 첫번째로 일일히 다 입력해주는 것이다. 다음과 같다.
+
+userController.js
+
+...
+
+  req.session.user = {
+		...req.session.user,
+    name,
+    email,
+    username,
+    location,
+  };
+
+...
+
+
+굉장히 불필요해보인다.
+
+...req.session.user 이것의 경우
+
+req.session.user안에 있는 내용을 전해주는 것입니다.
+
+req.session.user안의 내용을 밖으로 꺼내주는 것이다.
+
+이것을 첫 줄에 쓰고, 나머지 수정되는 것을 덮어쓰는 것입니다.
+
+두번째 방식은 updatedUser라는 variable를 만드는 방법입니다.
+
+  const updatedUser = await User.findByIdAndUpdate(_id, {
+    name,
+    email,
+    username,
+    location,
+  });
+  req.session.user = findByIdAndUpdate;
+  
+이와 같이 하는것인데 아직 이 방법만으로 새로운 updatedUser가 만들어 지지 않는다.
+
+option을 보면 보낼 수 있는 object가 하나 있는데 Boolean값을 가진 new이다.
+
+기본적으로 findByIdAndUpdate()는 update 되기 전의 데이터를 return 해주고 new: true를 설정해주면 findByIdAndUpdate()가 업데이트된 데이터를 return 해준다.
+
+다음과 같이말이다.
+
+  const updatedUser = await User.findByIdAndUpdate(
+    _id,
+    {
+      name,
+      email,
+      username,
+      location,
+    },
+    { new: true }
+  );
+  req.session.user = findByIdAndUpdate;
+  
+이렇게 해서 어느정도 코드 수정된 것을 보면 다음과 같다.
+
+userController.js
+
+export const postEdit = async (req, res) => {
+  const {
+    session: {
+      user: { _id },
+    },
+    body: { name, email, username, location },
+  } = req;
+  const updatedUser = await User.findByIdAndUpdate(
+    _id,
+    {
+      name,
+      email,
+      username,
+      location,
+    },
+    { new: true }
+  );
+  req.session.user = updatedUser;
+  return res.redirect("/users/edit");
+};
+
+
+하지만 문제는 유저가 DB안에 있는 name이나 email을 적어 보낸다면 업데이트 할 수 없게 해줘야 한다.
+
+이전에 postJoin부분에서 했던 내용이다. exists()를 활용하면 된다.
+
+여기서 postJoin과는 다른 것은 이것은 기존의 DB에 저장되있는 유저가 DB를 수정하려고 하는 것이다. 즉, 무턱대고 exists()를 사용하면 항상 true값이 나올것이다. _id를 이용해서 처리해야 할 것이다. 현재 session에 있는 사용자의 것이니깐.
+
+한 가지 방법은 body의 username, email이 session.user에 있는 username, email이랑 다른지 확인해보는 것이다.
+
+다르다면, 사용자가 username이나 email을 변경하고 싶다는 것이다.
+
+참고삼아, ES6에서 객체리터럴을 할 때 변수명을 변경하고 싶다면 다음과 같이 해주면 된다.
+
+    const {
+        session: {
+            user: { _id, avatarUrl, email: sessionEmail, username: sessionUsername },
+        },
+        body: { name, email, username, location },
+        file
+    } = req;
+
+여기서 sessionEmail이 email로 된 것이 아니라 email이 sessionEmail로 변수명을 변경해서 사용하겠다는 것이다.
+
+즉 sessionEmail = req.session.user.email; 이것과 동일하다.
+
+최종적으로 수정하는 코드를 보면 다음과 같다.
+
+export const postEdit = async (req, res) => {
+  const {
+    body: { name, email, username, location },
+    session: {
+      user: { _id },
+    },
+  } = req;
+  const findUsername = await User.findOne({ username });
+  const findEmail = await User.findOne({ email });
+  if ((findUsername != null && findUsername._id != _id) ||
+(findEmail != null && findEmail._id != _id)) {
+    return res.render("editProfile", {
+      pageTitle: "Edit  Profile",
+      errorMessage: "User is exist",
+    });
+  }
+  const updatedUser = await User.findByIdAndUpdate(
+    _id,
+    {
+      name,
+      email,
+      username,
+      location,
+    },
+    { new: true }
+  );
+  req.session.user = updatedUser;
+  return res.redirect("/users/edit");
+};
+
+이제 비밀번호를 변경해 보자.
+
+먼저 template를 좀 수정을 하자 change-password로 가는 링크를 추가해줘야 할 것 같다.
+
+edit-profile.pug에 해당 코드를 추가하면 될것이다.
+
+		...
+    hr
+    a(href="change-password") Change Password &rarr;
+
+
+그리고 get 과 post를 위한 controller를 만들면 될것이다.
+
+userController.js
+
+export const getChangePassword = (req, res) => {
+  return res.render("users/change-password", { pageTitle: "Change Password" });
+};
+
+export const postChangePassword = (req, res) => {
+  // send notification
+  return res.redirect("/");
+};
+
+
+당연히 router를 추가해주고 template도 routers폴더안에 change-password.pug를 만들어줘야 할 것이다.
+그 부분은 생략하도록 하겠다.
+
+template은 어떻게 구성되어야 할까? 기존 password를 입력하는 부분과 new password를 두번 입력하는 부분이 있으면 될 것 같다.
+
+extends ../base
+
+block content 
+  form(method="post")
+    input(placeholder="Old Password")
+    input(placeholder="New Password")
+    input(placeholder="New Password Confirmation")
+    input(value="Change Password", type="submit")
+
+검증단계는 필요하다. 이렇게 하고 나니 문제점이 생겼다.
+
+우리는 로그인 과정에서 깃허브로 로그인하는경우 Password를 치지 않았던 경우가 존재한다.
+
+이부분은 어떻게 해결할 수 있을까?
+
+두가지 방법이 존재한다.
+
+하나는 userController의 getChangePassword에서 로그인된 사용자의 정보를 확인하는것이다.
+
+if(req.session.user.socialOnly === true) {
+	return res.redirect("/");
+	}
+
+다른 방법은, form을 볼 수는 있지만, 사용할 수 없게 하는것이다.
+
+아예 깃허브로 로그인 했을 때 edit-profile의 view에서 안보여졌으면 좋겟다.
+
+다음과 같이 하면 된다.
+
+pug
+
+    if !loggedInUser.socialOnly 
+      hr
+      a(href="change-password") Change Password &rarr;
+      
+      
+이렇게해서 패스워드 변경 페이지로 이동하는 것 까지 손을 봐줬다.
+
+이제 controlller를 좀 봐줄건데 controller에서 postEdit을 만들 때 신경써야 되는 부분은 다음과 같다.
+
+1. new Password 와 New Password Confirmation 이 같지 않은 경우
+2. 입력한 Old Password가 원래 Password와 다른경우 
+3. 모든 조건을 통과할 경우 비밀 번호 변경
+
+1번의 경우 다음과 같이 처리를 해주면 된다.
+
+postChangePassword function
+
+  const {
+    body: { oldPassword, newPassword, newPasswordConfirmation },
+    session: {
+      user: { _id, password },
+    },
+  } = req;
+  if (newPassword !== newPasswordConfirmation) {
+    return res.status(400).render("users/change-password", {
+      pageTitle: "Change Password",
+      errorMessage: "The password does not match the confirmation",
+    });
+  }
+  
+...
+
+
+2번의 경우 다음과 같다.
+
+
+...
+
+  const ok = await bcrypt.compare(oldPassword, password);
+  if (!ok) {
+    return res.status(400).render("users/change-password", {
+      pageTitle: "Change Password",
+      errorMessage: "The current password is incorrect",
+    });
+  }
+  
+...
+
+
+이제 3번을 볼 것인데,
+생각해보니 비밀 번호 저장은 모델에서 pre를 선언해놓았다.
+
+User.js
+
+...
+
+userSchema.pre("save", async function () {
+  this.password = await bcrypt.hash(this.password, 5);
+});
+
+...
+
+이 함수를 작동시킬려면 두 가지를 해줘야한다.
+
+하나는, pre save middleware를 거치고 User.create를 사용하는 것이다.
+
+그리고 user.save()를 해도 pre save middleware를 작동시킬 것이다.
+
+그래서 먼저 user를 찾아야되는데 그것은 session을 통해 이미 알고있다.
+
+  const user = await User.findById(_id);
+  console.log("Old password", user.password);
+  user.password = newPassword;
+  console.log("New unhashed pw", user.password);
+  await user.save();
+  console.log("New pw", user.password);
+  
+  이와 같이 하고 결과는 다음과 같다.
+
+스크린샷, 2022-03-31 19-35-23.png
+
+하지만 이렇게 하고 프론트로 가서 비밀번호를 다시 한번 변경하려 하니간 되지 않는다.
+
+생각해본건데, 실행은 되지만 데이터 베이스에서 변경이 안되는것 같다.
+
+스크린샷, 2022-03-31 19-38-14.png
+
+하지만, 결과는 변경된 해시 비밀번호가 들어가 있다.
+
+어떻게 된것일까?
+
+우리가 기존 비밀번호를 session에 있는 비밀번호와 비교해서 그런것걸 수 있다.
+
+session을 업데이트 해주지 않은것이다.
+
+  req.session.user.password = user.password;
+
+이 코드를 추가하고 나면 해결이 된다.
+
+전체 코드는 다음과 같다
+
+export const postChangePassword = async (req, res) => {
+  const {
+    body: { oldPassword, newPassword, newPasswordConfirmation },
+    session: {
+      user: { _id, password },
+    },
+  } = req;
+  const ok = await bcrypt.compare(oldPassword, password);
+  if (!ok) {
+    return res.status(400).render("users/change-password", {
+      pageTitle: "Change Password",
+      errorMessage: "The current password is incorrect",
+    });
+  }
+  if (newPassword !== newPasswordConfirmation) {
+    return res.status(400).render("users/change-password", {
+      pageTitle: "Change Password",
+      errorMessage: "The password does not match the confirmation",
+    });
+  }
+  const user = await User.findById(_id);
+  user.password = newPassword;
+  await user.save();
+  req.session.user.password = user.password;
+  // send notification
+  return res.redirect("/users/logout");
+};
+
+이코드는 수정할수 있는 여지가 있다.
+
+const ok 부분에서 password를 session에서 끌어오는것이 아닌 밑에 User.findById부분을 끌어 올리는 것이다.
+
+export const postChangePassword = async (req, res) => {
+  const {
+    body: { oldPassword, newPassword, newPasswordConfirmation },
+    session: {
+      user: { _id },
+    },
+  } = req;
+  const user = await User.findById(_id);
+  const ok = await bcrypt.compare(oldPassword, user.password);
+  if (!ok) {
+    return res.status(400).render("users/change-password", {
+      pageTitle: "Change Password",
+      errorMessage: "The current password is incorrect",
+    });
+  }
+  if (newPassword !== newPasswordConfirmation) {
+    return res.status(400).render("users/change-password", {
+      pageTitle: "Change Password",
+      errorMessage: "The password does not match the confirmation",
+    });
+  }
+  user.password = newPassword;
+  await user.save();
+  // send notification
+  return res.redirect("/users/logout");
+};
+
+이러면 다음과 같이 코드를 줄일 수 있다.
+
+이제 file upload하는 부분을 살펴볼 것이다.
+
+edit-profile에 가서 다음부분을 추가해주자.
+
+    label(for="avatar") Avatar
+    input(type="file", id="avatar", name="avatar", accept="image/*")
+    
+
+이러면 파일을 넣을수 있는 부분이 생성될 것이다. 다음과 같이 말이다.
+
+스크린샷, 2022-03-31 19-56-12.png
+
+
+이것이 첫번째다.
+
+두 번째는, 우리를 도와줄 middleware를 사용해야한다.
+
+multer는 우리가 파일을 업로드 할 수 있게 해준다.
+
+우선, multer에게 도움을 받고싶으면 form을 multipart form으로 만들어야한다.
+
+  form(method="POST", enctype="multipart/form-data")
+    label(for="avatar") Avatar
+    input(type="file", id="avatar", name="avatar", accept="image/*")
+    ...
+    
+이와 같이 되게 된다.
+
+저부분이 무슨 것을 의미할까?
+
+이 말은 우리가 form이 다르게 encode될 거란 말이다.
+
+이게 파일을 업로드하기 위한 유일한 조건이다.
+
+저렇게 한 후 middleware를 만들어 줘야한다.
+
+middleware.js
+
+...
+
+export const uploadFiles = multer({
+	// configuration object  
+})
+
+우리가 보낼 수 있는 것 중 하나는 destination이다. 참고 : https://www.npmjs.com/package/multer
+
+파일을 어디에 보낼지 정하는 것이다.
+
+사용자가 보낸 파일을 어딘가에 넣어야되는데 예를 들어 하드드라이브든가 말이다.
+
+즉, 우리에게 필요한건 우리 서버의 어딘가에 저장할지를 적어놓으면 되는 것이다.
+	
+
+export const uploadFiles = multer({
+  dest: "uploads/"
+})
+
+다음과 같이 해주겠다.
+
+이것은 controller에서 사용하지 않고 router에서 사용할 것이다.
+
+userRouter
+  .route("/edit")
+  .all(protectorMiddleware)
+  .get(getEdit)
+  .post(uploadFiles.single("avatar"), postEdit);
+ 
+...
+
+다음과 같이 해줬다.
+
+uploadFiles뒤에쓰는 것은 여러가지가 있는데, fields, none, single array 등이 있다.
+
+사용자가 다수의 파일도 보낼 때도 필요해서 그런데 우리는 하나의 파일만 취급한다.
+
+매개변수로는 어디로부터 오는지 적어주면된다. (name을 적으면 된다.)
+
+순서대로 생각해보자.
+
+middleware를 실행한 다음, postEdit을 실행하는거다.
+
+좀더 자세히 알아보자.
+
+input으로 avatar 파일을 받아서 그 파일을 uploads폴더에 저장한 다음 그 파일 정보를 postEdit에 전달해주는 것이다.
+
+저 코드를 사용하면서 이제 req.file을 사용할 수 있다.
+
+postEdit function에 다음 코드를 추가해보고 실행 결과를 확인해보자.
+
+  const {
+    body: { name, email, username, location },
+    session: {
+      user: { _id },
+    },
+    file,
+  } = req;
+  console.log(file);
+  
+스크린샷, 2022-03-31 20-20-24.png
+
+파일 경로도 생성된것을 확인 할 수있다.
+
+uploads폴더가서 파일을 보면 확장자가 안붙어있는데 (.jpg) 
+브라우저는 이해하기 때문에 상관없다.
+
+controller에서 정리를 할건데, 아까 위에서 봤다싶히 file안에 path를가져올 것이다.
+
+그리고 이것을 findByIdAndUpdate에 보낼것이다.
+
+여기서 코드를 작성할 때 생각해야 하는 부분이 존재하는데, 그것은
+
+사용자가 아바타를 바꾸지 않는 경우를 생각해야 되는 것이다.
+
+만약 그냥 작성한다면 undifined의 path propery를 읽을수 없다고 오류가 나올 것이다.
+
+그래서 session에 담겨져있는 avatarUrl을 사용하는 방법으로 해결 할 수있다. 전체 코드는 다음과 같다.
+
+userController.js
+
+export const postEdit = async (req, res) => {
+  const {
+    body: { name, email, username, location },
+    session: {
+      user: { _id },
+    },
+    file,
+  } = req;
+  const findUsername = await User.findOne({ username });
+  const findEmail = await User.findOne({ email });
+  if (
+    (findUsername != null && findUsername._id != _id) ||
+    (findEmail != null && findEmail._id != _id)
+  ) {
+    return res.render("editProfile", {
+      pageTitle: "Edit  Profile",
+      errorMessage: "User is exist",
+    });
+  }
+  const updatedUser = await User.findByIdAndUpdate(
+    _id,
+    {
+      avatarUrl: file ? file.path : avatarUrl,
+      name,
+      email,
+      username,
+      location,
+    },
+    { new: true }
+  );
+  req.session.user = updatedUser;
+  return res.redirect("/users/edit");
+};
+
+
+중요한 부분인데 DB에는 파일을 저장하지 않는다.
+대신에 폴더에 파일을 저장하고 그 파일의 위치만 저장하는 것이다.
+-> 그 이유는?
+
+DB를 확인해 보면 다음과 같이 되어 있다.
+
+스크린샷, 2022-04-01 15-29-58.png
+
+이제 template을 수정해서 프론트쪽에서 확인해보자.
+
+edit-profile.pug
+
+  img(src=loggedInUser.avatarUrl, width="100", height="100").
+  
+  ...
+  
+하지만 사진이 출력이 안된다.
+
+무엇이 문제일까?
+
+해당 img의 url을 확인해보면 이상하게 되어있다.
+
+http://localhost:4000/users/uploads/7da2e8635f3eb7d6387235df22387e8c
+
+우리가 봤던 url과는 다르다.
+
+그 이유는 상대 경로이기 때문이다. 절대경로로 수정하자.
+
+img(src="/" + loggedInUser.avatarUrl, width="100", height="100")
+
+이제 원하는 경로로 뜬다. 
+
+http://localhost:4000/uploads/7da2e8635f3eb7d6387235df22387e8c
+
+하지만 우리가 원하는 사진은 정작 나오지 않는다. 이유가 무엇일까?
+
+우리는 이 해당 주소를 router로 처리한 기억이 없다. 모든 경로는 router에서 처리를 해줘야 하는데 말이다.
+
+즉, express한테 말해준 적이 없는것이다.
+
+자 생각해보자.
+
+브라우저가 서버의 어떤 폴더로든 갈 수 있다고 생각하면 보안상에 좋지 않을 것이다.
+
+그래서 우리가 브라우저가 어떤 페이지와 폴더를 볼 수 있는지 알려줘야 한다.
+
+그러기 위해서 static files serving을 활성화 시킨다.
+
+폴더를 가지고, 폴더 전체를 브라우저에게 노출 시킨다는 의미이다.
+
+app.use("/uploads", express.static("uploads"));
+
+이런식으로 한다.
+
+static안에는 노출시키고 싶은 폴더를 쓰면 된다.
+
+이렇게 하면 이제 프론트쪽에서 사진이 나온다.
+
+하지만, 문제점은 사진을 바꿀 때 마다  uploads에 저장되는 파일들이 계속해서 늘어난다는 것이다.
+
+첫 번째 문제는, 우리가 파일을 서버에 저장한다는 것이다.
+
+서버는 계속 종료되고 다시 시작하는걸 반복하는데 뭔가를 업데이트하면, 새로운 서버를 만들어서 다시 시작해야한다. 그 전 서버에 저장되어 있던 파일들은 날아가는 것이다.
+
+사람이 너무 많은경우 서버를 두개 이상을 운영할 때 uploads폴더를 공유해야 하는 것일까?
+
+혹은, 서버가 죽으면, 서버를 시작할 수 있는 코드를 가지고 다른서버에서 다시 시작하면 된다.
+그런데, 서버가 죽었을 때 코드와 업로드된 파일들이 있다면, 파일은 날라가는 것이다.
+
+이것은 나중에 실제 서버에 배포할 때 해볼것이다.
+
+기억해야 될 것이 또 하나 잇느넫, DB에 절대 파일을 저장하면 안되는 것이다.
+
+이제 Video를 다뤄볼 것이다.
+
+먼저 upload.pug가서 다음과 같이 해주자.
+
+extends base.pug
+
+block content
+    if errorMessage
+        span=errorMessage
+    form(method="POST", enctype="multipart/form-data")
+        label(for="video") Video File 
+        input(type="file", accept="video/*", required, id="video", name="video")
+        input(placeholder="Title", required, type="text", name="title", maxlength=80)
+        input(placeholder="Description", required, type="text", name="description", minlength=20)
+        input(placeholder="Hashtags, separated by comma.", required, type="text", name="hashtags")
+        input(type="submit", value="Upload Video")
+        
+여기서 기억해야 될 것은, enctype을 무조건 적어줘야 multer이 정상적으로 작동한다는 것이다.!!!!!!!
+        
+순서는 똑같이 다음과 같다.
+
+이미 multer을 import하고 있으니, Milddleware로 가서 function을 만들어 준 후,
+router로가서 middleware를 추가해준다.
+
+middlewares.js
+
+export const avatarUpload = multer({
+  dest: "uploads/avatars",
+  limits: 3000000,
+});
+
+export const videoUpload = multer({
+  dest: "uploads/videos",
+  limits: 10000000,
+});
+
+limits는 attribute는 Maximum File Size 이다.
+
+videoRouter.js
+
+...
+
+videoRouter
+  .route("/upload")
+  .all(protectorMiddleware)
+  .get(getUpload)
+  .post(videoUpload.single("video"), postUpload);
+  
+...
+
+이런식으로 하는건데, 여기서 만약 file size가 설정해둔 값보다 크다면 어떻게 될까?
+
+스크린샷, 2022-04-01 16-11-12.png
+
+다음과 같은 오류가 나올 것이다.
+
+이렇게 사용자에게 오류를 보여 줄 순 없으니 제대로 된 메세지가 뜨도록 만들어야 한다.
+
+먼저 video file upload하는 것부터 해결하고 처리하자.
+
+req.file에 video file정보가 담겨져 올 것이고, 그것의 path를 받아서 DB에 넣어주면 될 것 같다.
+
+위에서 했던 것과 차이가 없으므로 생략하도록 한다.
+
+이후 템플릿에서 video element를 추가해주면 된다.
+
+watch.pug 가서 다음과 같이 해주자 .
+
+extends base.pug
+
+block content
+    video(src="/" + video.fileUrl, controls)
+    div
+        p=video.description
+        small=video.createdAt
+    a(href=`${video.id}/edit`) Edit Video &rarr;
+    br
+    a(href=`${video.id}/delete`) Delete Video &rarr;
+
+
+이제 User Profile을 만들어볼 차례이다.
+
+유저 프로필에 들어가면 유저가 업로드한 영상들을 볼 수 있게 만들 것이다.
+
+그럴라면 일단, 해야할 것을 생각해보자.
+
+비디오에 현재 누가 올렸는 지 알 수 있는 정보가 담겨 있지 않다.
+
+그래서 Video Model에 owner을 추가해줄 필요가 있어보인다.
+
+user에는 video list를 추가해줘야 할 것 같다.
+
+그리고 이 둘을 연결 시켜주면 될 것 같다.
+
+먼저 template를 수정하자.
+
+a(href=`users/${loggedInUser._id}`) My Profile
+
+이 부분을 추가해주면 될것이다.
+
+이 부분을 보면 url 이 어떻게 뜰 것인지 짐작이 간다.
+
+userRouter.js로 가서 맨 마지막 에 get을 선언해준다.
+
+...
+
+userRouter.get("/:id", see);
+
+...
+
+이제 see부분을 수정하면 되는데 여기서 생각해될것이, profile을 확인하는 부분은 session으로 하는것이 아닌 url에서 받아서 쓰는 것이 좋아보인다. 왜나하면, session으로 해버리면 private Page가 되버린다.
+public Page 로 만들어야한다.
+
+export const see = async (req, res) => {
+	const { id } = req.params;
+	const user = await User.findById(id);
+	if(!user_ {
+		return res.status(404).render("404", {pageTitle: "User not found."});
+	}
+	return res. render("users/profile", {
+		pageTitle: `${user.name}`,
+		user
+	}
+}
+이제 'video'를 'user'와 연결하는 작업을 해보자.
+
+mongoose나 mongoDB를 활용해 이걸 연결하려면 'id'를 활용해야 한다.
+
+왜냐면 'id'는 하나밖에 없고 랜덤 숫자이니까  
+
+먼저 'videoSchema'에 'owner'를 추가해보자.
+
+일단 type: ObjectId 를 추가해줘야 되는데, 이것은 javascript에서 지원해주지 않아서 mongoose를 활용할 필요가 있다.
+
+또한, reference를 넣어줘야 하는데 그 이유는 'mongoose'에게 owner에 id를 저장하겠다고 알려줘야 하기 때때문이다.
+
+그런데 아직 어떤 'model'과 연결할 지 알려주지도 않은 상태다. 
+
+User.js를 보면 다음과 같이 해준 것이있다.
+
+const User = mongoose.model("User", userSchema);
+
+"User"로써 Model을 사용한다고 했으니 ref에다가 "User"이라고 명시해줘야한다.
+
+최종적으로 추가된 한 줄 코드를 살펴보면 다음과 같다.
+
+owner: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "User" },
+
+여기서 말하는 'ObjectId'는 DB를 살펴보면 볼 수 있다.
+
+스크린샷, 2022-04-01 20-06-28.png
+
+마지막으로 영상을 업로드하기 전에 해야되는 과정이 하나 있다.
+
+영상을 업로드할 때 업로드하는 사용자의 'id'를 전송해야하기 때문이다.
+
+postUpload를 살펴보면 다음과 같이 될것이다.
+
+export const postUpload = async (req, res) => {
+  const {
+    user: { _id },
+  } = req.session;
+  const { path: fileUrl } = req.file;
+  const { title, description, hashtags } = req.body;
+  try {
+    await Video.create({
+      title,
+      description,
+      fileUrl,
+      owner: _id,
+      hashtags: Video.formatHashtags(hashtags),
+    });
+    return res.redirect("/");
+  } catch (error) {
+    return res.status(400).render("upload", {
+      pageTitle: "Upload Video",
+      errorMessage: error._message,
+    });
+  }
+};
+
+
+영상을 업로드 해보면 다음과 같이 DB에서 확인할 수 있을 것이다.
+
+스크린샷, 2022-04-04 15-15-38.png
+
+추가적으로 생기는 문제점을 해결할 것인데 다음을 보자.
+
+스크린샷, 2022-04-04 15-16-18.png
+
+만약 id가 다른 즉, 업로드한 사람이 아닌 다른 사람이 이 영상을 edit 하거나 delete할 수 있는 권한이 주어지면 안된다. 그리고 누가 업로드를 했는지 명시되어 있으면 좋을 것 같다.
+
+이미 localsMiddlewares를 통해서 user.id를 template에서 활용할 수 있으니 Video의 Owner과 비교하는 조건문을 만들어 놓으면 될것같다.
+
+watch.pug
+
+extends base.pug
+
+block content
+    video(src="/" + video.fileUrl, controls)
+    div
+        p=video.description
+        small=video.createdAt
+    if video.owner === loggedInUser._id
+        a(href=`${video.id}/edit`) Edit Video &rarr;
+        br
+        a(href=`${video.id}/delete`) Delete Video &rarr;
+        
+이런식으로 하면 정상적으로 화면이 나오지 않는다.
+
+현재 출력해보면 video.owner 과 loggedInUser._id는 같은 출력값을 보여주고 있는데도 말이다.
+
+그 이유는 vidoe.owner은 'ObjectId'인데, loggedInUser._id는 'String"형태의 데이터이기 때문이다.
+그래서 해당부분을 이렇게 수정하자.
+
+if String(video.owner) === String(loggedInUser._id)
+
+이제 이것을 시크릿 모드로해서 들어가면 재대로 작동할까?
+
+다음과 같은 화면이 출력될 것이다.
+
+스크린샷, 2022-04-04 15-26-51.png
+
+왜 이런 오류가 발생할까?
+
+현재 loggedInUser에 담겨져 있는 것이 없어서 undefined로 되어 있을텐데 거기서 아무것도 없는 텅 빈 껍데기에서 무언가를 참조하려고하니깐 생기는 오류다.
+
+해결방법은 다음과 같다.
+
+extends base.pug
+
+block content
+    video(src="/" + video.fileUrl, controls)
+    div
+        p=video.description
+        small=video.createdAt
+    if loggedInUser
+        if String(video.owner) === String(loggedInUser._id)
+            a(href=`${video.id}/edit`) Edit Video &rarr;
+            br
+            a(href=`${video.id}/delete`) Delete Video &rarr;
+
+해당 두줄 코드는 다음과 같이 한 줄로써 사용도 가능합니다.
+
+if loggedInUser && String(video.owner) === String(loggedInUser._id)
+
+이 부분은 해결했다. 이제 업로드한 사람을 명시해 주는 부분을 해보면 될것같다.
+
+이것은 controller에서 User Model을 활용하면된다.
+
+VideoController.js
+
+export const watch = async (req, res) => {
+  const { id } = req.params;
+  const video = await Video.findById(id);
+  const owner = await User.findById(video.owner);
+  if (!video) {
+    return res.render("404", { pageTitle: "Video not found." });
+  }
+  return res.render("watch", { pageTitle: video.title, video, owner });
+};
+
+간단하다. 이것으로 owner 안의 value는 template에 가서 사용할 수 있을 것이다. 그 부분은 생략하도록 하겠다.
+
+좀 더 수정을 해볼것인데, Model을 보면 우리는 reference의 속성값으로 "User"를 넣어줬다.
+그것을 이용해서 위의 코드를 줄여보자. 'mongoose'를 활용하는 것이다.
+
+'moongoose'는 이 'objectId'가 'User'에서 오는걸 아니까 도와줄것이다.
+
+export const watch = async (req, res) => {
+  const { id } = req.params;
+  const video = await Video.findById(id).populate("owner");
+  if (!video) {
+    return res.render("404", { pageTitle: "Video not found." });
+  }
+  return res.render("watch", { pageTitle: video.title, video, owner });
+};
+
+populate는 owner를 실제 데이터로 채워줄 것이다.
+
+populate 와 relationship만 적어주면 되는 것이다.
+
+이것이 하기전,
+
+스크린샷, 2022-04-04 15-45-20.png
+
+이것이 한 후,
+
+스크린샷, 2022-04-04 15-46-14.png
+
+template는 다음과 같이 수정을 해주면 된다.
+
+extends base.pug
+
+block content
+    video(src="/" + video.fileUrl, controls)
+    div
+        p=video.description
+        small=video.createdAt
+    div 
+        small Uploaded by 
+        a(href=`/users/${video.owner._id}`) #{video.owner.name}
+    if loggedInUser
+        if String(video.owner._id) === String(loggedInUser._id)
+            a(href=`${video.id}/edit`) Edit Video &rarr;
+            br
+            a(href=`${video.id}/delete`) Delete Video &rarr;
+
+
+이것이 'mongoose relationship'이다.
+
+그리고 우리는 user profile에 갔을 때 해당 유저가 업로드한 동영상을 볼 수 있는 기능을 추가하겠다고 말했다.
+
+그것은 userController.js에서 다음과 같이 하면된다.
+
+export const see = async (req, res) => {
+  const { id } = req.params;
+  const user = await User.findById(id);
+  if (!user) {
+    return res.status(404).render("404");
+  }
+  const videos = await Video.find({ owner: user._id });
+  return res.render("users/profile", {
+    pageTitle: `${user.name}`,
+    user,
+    videos,
+  });
+};
+
+template에서 하는것은 base.pug에서 했던 것과 동일하게 만들어져 있는 Mixin을 활용하면 되겠다. 생략하겠다.
+
+위의 코드를 좀더 깔끔하게 수정해보자.
+
+어떤 유저가 업로드한 모든 영상들을 찾기 위해 우리는 populate를 쓸 수 있다.
+
+1개의 영상의 소유주는 1명이다. 소유주는 여러 영상을 소유할 수 있다.
+
+이것을 이용해서 우리는 User Model에다가 Array를 만들수 있을것같다.
+
+User Model에 다음을 추가하자.
+
+videos: [{ type: mongoose.Schema.Types.ObjectId, ref: "Video" }]
+
+'videos'는 Video model에 연결된 ObjectId로 구성된 Array이다.
+
+이제 User에 Video Array가 있으니 새로 업로드하는 영상의 'id'를 'user model'에 저장해줄 것이다.
+
+현재 우리는 유저의 'id'를 'Video'의 'owner'에 추가하고 있다.
+
+newVideo의 id를 User의 'videos array'에 추가해 줄 것이다.
+
+postUpload funciton을 다음과 같이 수정해줬다.
+
+export const postUpload = async (req, res) => {
+  const {
+    user: { _id },
+  } = req.session;
+  const { path: fileUrl } = req.file;
+  const { title, description, hashtags } = req.body;
+  try {
+    const newVideo = await Video.create({
+      title,
+      description,
+      fileUrl,
+      owner: _id,
+      hashtags: Video.formatHashtags(hashtags),
+    });
+    const user = await User.findById(_id);
+    user.videos.push(newVideo._id);
+    user.save();
+    return res.redirect("/");
+  } catch (error) {
+    return res.status(400).render("upload", {
+      pageTitle: "Upload Video",
+      errorMessage: error._message,
+    });
+  }
+};
+
+Video.create는 Video Model Object를 Return 해주기 때문에 newVideo로 받은 것이고, 이것을 이용해서 user를 찾은다음 해당 유저의 'video array'에 요소를 추가해주는 것이다. 그때 사용한 것이 push()이다.
+
+해당 캡쳐를 보면 User, Video Model에 다음과 같이 들어가는 것을 확인할 수 있었습니다.
+
+스크린샷, 2022-04-04 16-23-21.png
+
+see function을 다음과 같이하고 결과를 보면 다음과 같다.
+
+export const see = async (req, res) => {
+  const { id } = req.params;
+  const user = await User.findById(id).populate("videos");
+  console.log(user);
+  if (!user) {
+    return res.status(404).render("404");
+  }
+  return res.render("users/profile", {
+    pageTitle: `${user.name}`,
+    user,
+  });
+};
+
+스크린샷, 2022-04-04 16-29-19.png
+
+여기서 보면 populate는 해당 부분만 바꿔서 return 해주는 것이 아니라, 특정 부분을 실제 데이터로 바꿔서 기존 데이터와 같이 return해주는 것을 확인할 수 있습니다. 그렇게 함으로써 불필요한 코드를 제거할 수 있게 된 것입니다.
+
+이제 영상에 소유주의 데이터가 담긴 것이다. 이것으로써 우리가 할 수 있는것이 무엇인가를 생각해보았을 때 아까 영상의 주인이 아니면 Edit Video 와 Delete Video를 하지 못하도록 수정을 해줬다.
+
+하지만, 그것은 우리가 직접 URL을 입력하면 사용할 수 있는 부분이다. 그것을 막을 수 있게 되었다.
+
+이 부분은 조금 있다가 하고 한 가지 문제점이 있다.
+
+우리는 'VideoController'에서 영상을 업로드할 때 'user.save()'를 실행한다. User Model을 보면 우리는 pre를 선언해놓은 것이있다.
+
+userSchema.pre("save", async function () {
+  this.password = await bcrypt.hash(this.password, 5);
+});
+
+그렇게 되면 비밀번호가 다시 한번 'hash'가 된다.
+
+이것은 우리가 유저를 저장할 때 마다 비밀번호를 Hash하는 것으로 하는 것이 아니라 패스워드를 수정할 때만 Hash가 되도록 하면 문제가 해결될 것 같다.
+
+그것은 다음과 같이 하면된다.
+
+User.js
+
+userSchema.pre("save", async function () {
+  if (this.isModified("password")) {
+    this.password = await bcrypt.hash(this.password, 5);
+  }
+});
+
+isModified()는 수정된 부분이 있으면 true 없으면 false를 출력한다.
+
+이제 두 번쨰 버그를 고쳐볼 차례이다.
+
+'videoController'를 살펴보자.
+
+getEdit function이 있는데 'edit form'이 영상 주인에게만 나타나도록 만들어줘야한다.
+
+영상의 주인이 아니면 이 페이지에 접근하지 못하도록 해줘야 하는 것이다.
+
+export const getEdit = async (req, res) => {
+  const { id } = req.params;
+  const {
+    user: { _id },
+  } = req.session;
+  const video = await Video.findById(id);
+  if (!video) {
+    return res.status(404).render("404", { pageTitle: "Video not found." });
+  }
+  if (String(video.owner) !== String(_id)) {
+    return res.status(403).redirect("/");
+  }
+  return res.render("edit", { pageTitle: `Edit: ${video.title}`, video });
+};
+
+getEdit, postEdit, deleteVideo등에 전부 필요한 코드일것같다.
+
+프론트엔드에선 안보일지 모르지만 백엔드에선 항상 보호해줘야 한다.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	

@@ -1,0 +1,1821 @@
+ USER AUTHENTICATION
+ 
+우리가 만드는 앱에 계정을 생성하는 페이지
+
+전에 강의 내용 + Authenticatino(인증) 
+
+유저로 CRUD 구현
+
+password 어떻게 만드는지도 보여줌
+
+models/User.js 만들기
+
+User.js를 다 구현 하고 default exrpot 해주면 init.js에서 받으면 된다.
+
+email 이나 username이 겹치면 안되기 때문에 나오는 option -> unique
+
+models/User.js
+
+import mongoose from "mongoose";
+
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  name: { type: String, required: true },
+  location: String,
+});
+
+const User = mongoose.Model("User", userSchema);
+export default User;
+
+이후 controller로 가서 	수정
+
+export const join = (req, res) => {
+  return res.render("createAccount", { pageTitle: "Create Account" });
+};
+
+createAccount.pug 생성
+
+base.pug가서 navigation하나 더 생성하기.  
+
+base.pug
+
+doctype html
+html(lang="ko")
+    head
+        title #{pageTitle} | Wetube
+        link(rel="stylesheet" href="https://unpkg.com/mvp.css")
+    body
+        header
+            h1=pageTitle
+            nav 
+                ul 
+                    li 
+                        a(href="videos/upload") Upload Video 
+                    li 
+                        a(href="/") Home
+                    li 
+                        a(href="/search") Search
+                    li 
+                        a(href="/join") Join
+        main
+            block content
+    include partials/footer.pug
+    
+
+router가서도 수정을 해줘야되는데, 우리는 POST메소드를 사용할 것을 짐작할 수 있다.
+
+rootRouter.js
+
+...
+
+postJoin을 먼저 만들기 전에 join.pug로 가서 form을 먼저 만들자.
+
+join.pug
+
+extends base
+
+block content 
+  form(method="post") 
+    input(placeholder="Name" name="name" , type="text", required )
+    input(placeholder="Eamil" name="email" , type="email", required )
+    input(placeholder="Username" name="username" , type="text", required )
+    input(placeholder="Password" name="password" , type="password", required )
+    input(placeholder="Location" name="location" , type="text", required )
+    input(type="submit", value="Join")
+
+
+실행 하는데 이런 오류가 나왔다.
+
+스크린샷, 2022-01-21 16-37-53.png
+
+그래서 머가 문제인가 했는데 다음이 문제였다.
+
+const User = mongoose.model("User", userSchema);
+
+여기서 model을 Model로 쓰니깐 오류가 생긴 것 이였다.
+
+문제 해결후 postJoin을 확인하기 위해 다음과 같이 했다.
+
+Usercontroller.js
+
+
+import User from "../models/User"
+
+export const postJoin = (req, res) => {
+  console.log(req.body);
+  res.end();
+};
+
+
+문제없이 잘 출력 됐지만, 만약 경고(DeprecationWarning)가 발생한다면 작동은 되지만 오래됐으니깐 수정하라고 알려주는 것이다.
+경고는 에러가 아니다. 실행이 되긴 한다.
+
+
+본격적으로 유저를 만들어 보자 다음과 같이 하면된다.
+
+export const postJoin = async (req, res) => {
+  const { name, username, email, password, location } = req.body;
+  await User.create({
+    name,
+    username,
+    email,
+    password,
+    location,
+  });
+  return res.rediret("/login");
+};
+
+유저를 생성한 뒤 데이터 베이스를 뒤져보면 다음과 같다.
+
+mongod -> mongo -> show dbs -> use dbs -> show collections -> db.users.find()
+
+스크린샷, 2022-01-21 17-04-50.png
+
+여기보면 문제가 password가 그대로 노출되어 있다는 문제점이 있다.
+
+보안이 전혀 안되어 있는 것이다.
+
+password를 저장하기 전에 보안처리를 해야 되는 것이다.
+
+Password Hashing(해싱) 해시화 시키는 것이다.
+
+해싱은 일방향 함수인데, 문자열이 필요하다.
+
+즉, 절대 되돌릴 수 없다는 뜻이다. 1212121-> asdklfnowefnqwefksdjbv  
+
+출력값으로 입력값을 알아낼 수가 없다.
+
+어떠한 방식으로 해싱되는지 보고싶으면 [여기](https://emn178.github.io/online-tools/index.html)
+
+해싱의 경우 같은 입력값을 입력하면 해시값은 항상 똑같다.
+
+즉, 시간에 구애받지 않는다는 것이다.
+
+이런걸 컴퓨터과학에서 deterministic function(결정적 함수)라고 한다.
+
+다시 db.users.remove({})를 입력하고 새로 만들어보자.
+
+node.bcrypt.js를 사용할 것이다. bcrypt
+
+우리는 bcrypt로 password를 해싱할것이다. 해커가 해싱된 password를 가지고 할 수 있는 공격이 있다.
+
+rainbow table이란 것이다.
+
+rainbow table공격을 bcrypt가 막아줄 것이다.
+
+bcrypt.hash(myPlaintextPassword, saltRounds, function(){	});
+
+여기서 보면 argument가 하나 더있는데 saltRounds라는 것이다.
+
+말그대로 소금을 뿌리는 건데, pasword를 더 예측하기 어렵게 만들어준다.
+
+saltRounds에 입력한 숫자만큼 hashing을 해준다. 무슨 말이냐?
+
+예를 들어 보자면, saltRounds가 2일 때 
+123456 -> 9f0b9sdfuxc7 -> h2fassd452sd 이런식으로 2번의 해싱과정을 거치는 것이다.
+
+password를 해싱할건데, User가 저장하기 전에 해싱을 해줄거니깐 전에 배웠던 pre("save")를 사용하면 될 것 같다.
+
+this.password를 가지고 해싱할건데 callback함수, Promise를 사용할 수 있다.
+
+.then 을 쓰거나 async, await를 쓸 수 있다.
+
+userSchema.pre("save", async function () {
+  this.password = await bcrypt.hash(this.password, 5);
+});
+
+
+hash(this.password, 5) 이부분에서 callback함수를 쓸 수 있지만 필요 없다. await를 쓰고 있으니까.
+
+userSchema.pre("save", async function () {
+  console.log("Users password:", this.password);
+  this.password = await bcrypt.hash(this.password, 5);
+  console.log("Hahsed password:", this.password);
+});
+
+결과는 다음과 같다.
+
+스크린샷, 2022-01-21 17-30-03.png
+
+이제 유저가 로그인 하고 싶을 때 어떻게 패스워드 일치 여부를 확인하는지 확인해보자.
+나중에...
+
+그 전에 계정 생성할 때 중복되는 계정이 있으면 안된다.
+
+현재 required와 unique를 준 상황에서 겹치는 정보를 준다면 계속 로딩이 되면서 오류가 나올 것이다.
+
+MongoError: E11000 duplicate key error collection 
+
+유저가 에러를 체크할 수 있도록 해줘야 한다.
+
+무엇을 활용하면 될까? exists()함수이다. 만들고 template에 만들어 errorMessage를 띄도록 해놓으면 된다.
+
+
+export const postJoin = async (req, res) => {
+  const { name, username, email, password, location } = req.body;
+  const pageTitle = "Join";
+  const usernameExists = await User.exists({ username });
+  if (usernameExists) {
+    return res.render("join", {
+      pageTitle,
+      errorMessage: "This username is already taken.",
+    });
+  }  
+  const emailExists = await User.exists({ email });
+  if (emailExists) {
+    return res.render("join", {
+      pageTitle,
+      errorMessage: "This email is already taken.",
+    });
+  }
+
+  await User.create({
+    name,
+    username,
+    email,
+    password,
+    location,
+  });
+  return res.redirect("/login");
+};
+
+
+join.pug
+
+extends base
+
+block content 
+	if errorMessage
+		span=errorMessage
+  form(method="post") 
+    input(placeholder="Name" name="name" , type="text", required )
+    input(placeholder="Eamil" name="email" , type="email", required )
+    input(placeholder="Username" name="username" , type="text", required )
+    input(placeholder="Password" name="password" , type="password", required )
+    input(placeholder="Location" name="location" , type="text", required )
+    input(type="submit", value="Join")
+
+
+
+controller를 보니깐 중복되는 코드가 많아 보인다. usernameExists를 체크하든가 emailExists를 체크하든가가 좋아 보인다.
+
+그때 사용할 수 있는 것이 $or operato이다. 
+
+$or operator를 쓰면 각 조건이 true일 때 실행되게 만들 수 있다.
+이것을 사용하는 이유는 사용중인 username과 email을 동시에 입력할 수도 있기 때문이다.
+
+
+  const usernameExists = await User.exists({ username, email });
+  
+이런식으로 한다면 사용중인 username과 email을 동시에 가진 USER만 체크가 된다.
+
+$or로는 사용중인 username과 사용 중이지 않은 email을 가진 User를 찾아 낼 수있다.
+
+export const postJoin = async (req, res) => {
+  const { name, username, email, password, location } = req.body;
+  const pageTitle = "Join";
+  const exists = await User.exists({ $or: [{ username }, { email }] });
+  if (exists) {
+    return rex.render("join", {
+      pageTitle,
+      errorMessage: "This username/email is already taken.",
+    });
+  }
+
+  await User.create({
+    name,
+    username,
+    email,
+    password,
+    location,
+  });
+  return res.redirect("/login");
+};
+
+이렇게 하고나니 유저가 username이 중복인지 email이 중복인지 헷갈릴 수도 있겟다.
+
+그래서 아예 username을 쓰지 않고 email만 쓰는게 좋을 수도 있다.
+
+일단 $or의 기능을 보기위해 이렇게 했으니 넘어가자.
+
+password를 확인 할 수 있는 input을 하나 추가해야된다.
+
+join.pug
+
+extends base
+
+block content 
+  form(method="post") 
+    input(placeholder="Name" name="name" , type="text", required )
+    input(placeholder="Eamil" name="email" , type="email", required )
+    input(placeholder="Username" name="username" , type="text", required )
+    input(placeholder="Password" name="password" , type="password", required )
+    input(placeholder="Confirm Password" name="password2" , type="password", required )
+    input(placeholder="Location" name="location" , type="text", required )
+    input(type="submit", value="Join")
+    
+    
+    
+controller.js
+
+export const postJoin = async (req, res) => {
+  const { name, username, email, password, password2, location } = req.body;
+  const pageTitle = "Join";
+  const exists = await User.exists({ $or: [{ username }, { email }] });
+
+  if (password !== password2) {
+    return res.render("join", {
+      pageTitle,
+      errorMessage: "Password confirmation dose not match.",
+    });
+  }
+
+  if (exists) {
+    return rex.render("join", {
+      pageTitle,
+      errorMessage: "This username/email is already taken.",
+    });
+  }
+
+  await User.create({
+    name,
+    username,
+    email,
+    password,
+    location,
+  });
+  return res.redirect("/login");
+};
+
+    
+만약 내가 기존에 있는 username 혹은 email을 쳐서 post메소드로 보내면 구글 크롬에선 아이디 비밀번호를 기억하겠냐고 물어본다. 하지만 이것은 이상하다. username혹은 email이 중복되어서 계정은 생성되지 않았지만 이것을 물어보는건 이상하다.
+
+Logger에 찍히는 status code를 보니 200으로 찍혀있다. 이것은 OK라고 말하는 것이다.
+
+[위키백과 HTTP 상태코드](https://ko.wikipedia.org/wiki/HTTP_%EC%83%81%ED%83%9C_%EC%BD%94%EB%93%9C)
+
+구글 크롬에선 form에 username과 password를 보낸걸 알고 계정 생성이 성공적을 됐다고 판단하면 패스워드를 저장할거냐고 물어보는것이다.
+
+판단 근거는 상태 코드 200을 응답으로 받았기 때문이다.
+
+이것은 좀 잘못되어 있다. 수정할 필요가 있다.
+
+계정생성에 실패를 했다면, 상태 코드 200을 받으면 안될 것 같다.
+
+400 Bad Request를 받으면 될것같다.
+
+그러면 render를 할 때 어떻게 상태 코드를 보낼 수 있을까?
+
+res.render() 사이에 status(400)을 추가하기만 하면 된다.
+
+controller.js
+
+...
+
+  if (exists) {
+    return rex.status(400).render("join", {
+      pageTitle,
+      errorMessage: "This username/email is already taken.",
+    });
+  }
+
+
+...
+
+단순히 status code를 보내는게 별로 중요하지 않은 것 처럼 보이지만 그렇지 않다.
+
+예를 들어, 브라우저에서 네가 방문한 웹사이트의 히스토리를 저장하는데 어떤 웹사이트를 방문했을 때, 상태코드 200로 응답하면 그 사이트를 방문했다고 히스토리에 기록을 남길거다. 
+
+but 400을 받는다면, 브라우저가 그 URL을 히스토리에 남기지 않는다.
+
+이것은 브라우저에게 유일하게 알려주는 방법이다. (기록하지 말라고)
+
+최종적으로 try - catch문 까지 처리를 하고 나면 다음과 같이 될것같다.
+
+
+export const postJoin = async (req, res) => {
+  const { name, username, email, password, password2, location } = req.body;
+  const pageTitle = "Join";
+  const exists = await User.exists({ $or: [{ username }, { email }] });
+
+  if (password !== password2) {
+    return rex.status(400).render("join", {
+      pageTitle,
+      errorMessage: "Password confirmation dose not match.",
+    });
+  }
+
+  if (exists) {
+    return rex.status(400).render("join", {
+      pageTitle,
+      errorMessage: "This username/email is already taken.",
+    });
+  }
+  try {
+    await User.create({
+      name,
+      username,
+      email,
+      password,
+      location,
+    });
+    return res.redirect("/login");
+  } catch (error) {
+    return res.status(400).render("join", {
+      pageTitle: pageTitle,
+      errorMessage: error._message,
+    });
+  }
+};
+
+자 이제 join.page 를 마무리 짓자.
+
+controller은 마무리 된것이다. login으로 넘어가는 것만 추가 해주면서 마무리를 짓는다.
+
+extends base
+
+block content 
+  form(method="post") 
+    input(placeholder="Name" name="name" , type="text", required )
+    input(placeholder="Eamil" name="email" , type="email", required )
+    input(placeholder="Username" name="username" , type="text", required )
+    input(placeholder="Password" name="password1" , type="password", required )
+    input(placeholder="Confirm Password" name="password1" , type="password", required )
+    input(placeholder="Location" name="location" , type="text", required )
+    input(type="submit", value="Join")
+
+  hr
+  div   
+    span Already have an account? 
+    a(href="/login")  Log in now &rarr;
+    
+    
+이제 login을 구현할 차례다.
+
+login도 get과 post를 써야 할것이다.
+
+Login Page는 Join Page와 매우 유사할 것이다.
+
+다음과 같이 하면 된다.
+
+login.pug
+
+extends base
+
+block content 
+  form(method="post") 
+    input(placeholder="Username" name="username" , type="text", required )
+    input(placeholder="Password" name="password1" , type="password", required )
+    input(type="submit", value="Join")
+
+  hr
+  div   
+    span Don't have an account? 
+    a(href="/join") Create one now &rarr;
+    
+로그인 페이지 같은 경우 POST로 정보를 보내서 받았을 때 계정이 존재 하는지 안하는지 체크를 해야한다.
+
+일단 계정을 받았을 때 username이  database에 있는지 확인하는 과정까지 코딩을 해보자.
+
+export const postLogin = async (req, res) => {
+  const { username, password } = req.body;
+  const exists = await User.exists({ username });
+  if (!exists) {
+    return res
+      .status(400)
+      .render("login", {
+        pageTitle: "Login",
+        errorMessage: "An account with this username dose not exists.",
+      });
+  }
+  // check if password correct
+  return res.end();
+};    
+
+
+이제 비밀번호를 비교해 볼것인데, 계정을 생성할 때 비밀번호는 해싱 처리를 했다.
+
+근데 처음 비밀번호가 같으면 해싱횟수를 똑같이 하면 항상 같은 출력값을 가진다고 했다.
+
+우리가 DB에 넣어논 것은 해시값이다.
+
+그래서 우리는 유저가 로그인 하려 할 때 해야하는 것은,
+
+로그인할 때 유저가 입력한 패스워드를 가져다가 해싱을 하면 되는거다.
+
+그래서 나온 해시값을 DB의 해시값과 비교하면 되는것이다.
+
+그래서 사용할 함수는 compare이다.
+
+bcrypt.compare(myPlaintextPassword, hash)
+
+이런식으로 활용한다. 
+
+controller.js
+
+
+export const postLogin = async (req, res) => {
+  const { username, password } = req.body;
+  const pageTitle = "Login";
+  const user = await User.findOne({ username });
+  if (!user) {
+    return res.status(400).render("login", {
+      pageTitle,
+      errorMessage: "An account with this username dose not exists.",
+    });
+  }
+  const ok = await bcrypt.compare(password, user.password);
+  if (!ok) {
+    return res.status(400).render("login", {
+      pageTitle,
+      errorMessage: "Wrong Password",
+    });
+  }
+  console.log("Log User IN! Coming Soon!");
+  return res.redirect("/");
+};
+
+여기서 찾아봐야 할 것은 const ok = await bcrypt.compare(password, user.password); 이거를 쓸 때 hashing을 몇 번 했는지는 상관이 없는건가?
+https://ko.wikipedia.org/wiki/Bcrypt 여기를 참고하자.
+
+If you look at what bcrypt generates you can see that the salt is at the start of the hash.
+
+아직 로그인을 체크는했지만 접속한 유저가 누구인지 기억하고 있다는거나 그런것의 구현은 아직이다.
+
+이부분은 쿠키와 세션에 대해서 얘기를 해야한다.
+
+유저를 기억하느 방법 중 한가지는 유저에게 쿠키를 보내주는 것이다.
+
+쿠키를 이해하기 위해서는 우선 세션에 대해 알아야 한다.
+
+세션은 간단하게 말하자면, 백엔드와 브라우저 간에 어떤 활동을 했는지 기억하는걸 말한다.
+
+세션은 브라우저와 백엔드 사이의 memory, history 같은것이다.
+
+한 변 연결이 되었다가 끝나는 것이다. 이 둘 사이 연결에 state가 없는 것이다.
+
+그런 것을 stateless라고 한다.
+
+그래서 우리는 유저한테 어떤 정보를 남겨줘야 한다.
+
+유저가 백엔드에 뭔가 요청 할 때마다 누가 요청하는지 알 수 있게말이다.
+
+그래서 유저가 로그인 할 때마다 유저한테 뭔가 줄거다. 자그마한 텍스트
+
+유저가 서버(우리)한테 요청을 보낼 때마다 그 텍스트를 같이 보내달라고 하는 것이다.
+
+express-session Middleware를 활용하여 세션을 처리 할 수 있게 해줄 것이다.
+
+router전에 작성해야 하고 
+
+app.use(session({
+// 이 안에 secret이라는 설정을 해줘야 한다.
+// console에 나올 두개를 쓸거다. resave, saveUninitialized
+}))
+
+app.use(
+  session({
+    secret: "Hello!",
+    resave: true,
+    saveUninitialized: true,
+  })
+);
+
+이제 이 미들웨어가 사이트로 들어오는 모두를 기억한다.
+
+로그인 하지 않았어도 기억한다. 들어온 사람들한테 어떤 텍스트를 주고 그 텍스트를 가지고 유저가 누구인지 알아 낼것이다.
+
+inspect를 하고 Application 탭에 들어가면 Cookise, localhost:4000이 있는데,
+
+스크린샷, 2022-01-21 22-45-48.png
+
+아직 쿠키는 없는데, 새로고침을 하면 생긴다.
+
+스크린샷, 2022-01-21 22-46-33.png
+
+브라우저가 서버에 요청을 보내고 서버에서는 session 미들웨어가 브라우저한테 텍스트를 보낼 것이다.
+
+서버가 브라우저를 개별적으로 기억할 수 있게 말이다.
+
+자, 이제 백엔드에 요청을 보낼 때마다 해당 텍스트가 백엔드로 같이 보내진다.
+
+이 쿠키가 무슨 역할을 하는지 살펴보기 위해 다음과 같이 해준다.
+
+app.use((req, res, next) => {
+  console.log(req.headers);
+  next();
+});
+
+
+스크린샷, 2022-01-21 22-49-52.png
+
+cookie가 담겨있는 것을 볼 수 있다.
+
+다음과 같이 해보자.
+
+app.use((req, res, next) => {
+  req.sessionStore.all((error, sessions) => {
+    console.log(sessions);
+    next();
+  });
+});
+
+백엔드가 기억하고 있는 sessions를 console.log한걸 보게 된다.
+백엔드가 기억하고 있는 유저들을 말이다.
+
+두번의 새로고침을 하면 이렇게 출력이 된다.
+
+스크린샷, 2022-01-21 22-53-17.png
+
+만약 다른 걸로 해서 들어간다면? (시크릿 모드)
+
+스크린샷, 2022-01-21 22-55-19.png
+
+이제 두명이다.
+
+만약 서버를 종료하고 다시 시작하면 이 세션들은 사라진다.
+
+express가 세션을 메모리에 저장하고 있기 때문이다.
+
+나중에는 백엔드가 잊지 않도록 세션을 mongoDB와 연결할 것이다.
+
+이제 백엔드가 쿠키를 가지고 어떻게 브라우저를 구분하는지 보여준다.
+
+브라우저에서 봤던 텍스트가 백엔드에서 세션 id로 사용되고 있었다.
+
+백엔드의 메모리에 세션을 저장할수 있는 DB가 생긴것이다.
+
+백엔드이 각 세션들은 id를 가지고 있고 이 id를 브라우저한테 보냈다.
+
+그러면 브라우저가 요청을 보낼 때마다 그 id를 같이 보내줘서 브라우저와 일치하는 세션이 뭔지 알 수 있고, 어떤 세션이 크롤과 일치하는지도 알 수 있다.
+
+세션 id를 가지고 있으면 세션 object에 정보를 추가 할 수 있다.
+
+URL을 하나 만들건데 이 URL은
+
+res를 return 해서 req.session.id를 담은 텍스트를 send 할것이다.
+
+app.get("/add-one", (req, res, next) => {
+  return res.send(`${req.session.id}`);
+});
+
+브라우저 별로 add-one페이지로 가면 각각 다른 세션 id가 나올 것이다.
+
+req.session은 javascript Object이다. 그래서 다음과 같이도 할 수 있다.
+
+app.get("/add-one", (req, res, next) => {
+	req.session.potato += 1;
+  return res.send(`${req.session.id}`);
+});
+
+새로고침을 처음하면 NaN이 나오는데 그이후 +1씩 커지는것을 확인 할 수 있다.
+
+스크린샷, 2022-01-21 23-10-06.png
+
+내가 브라우저에서 웹사이트를 방문할 때마다 이 세션 미들웨어가 있으면 express가 알아서 그 브라우저를 위한 세션 id를 만들고 브라우저한테 보내준다. 알아서 처리 그러면 브라우저가 쿠키에 세션 id를 저장하고 express에서도 그 세션을 세션 DB에 저장할것이다. 세션 DB에 있는 id와 쿠키에 있는 id가 같도록 말이다. 그러면 브라우저한테 보내서 쿠키에 저장한 세션id를 브라우저가 localhost:4000의 모든 url에 요청을 보낼 때마다 세션 id를 요청과 함께 보낼것이다. 그러면 백엔드에서 어떤 유저가, 어떤 브라우저에서 요청을 보냈는지 알 수 있는거다.
+
+이제 usercontroller로가서 이 세션을 처리하자
+
+유저가 로그인하면 그 유저에 대한 정보를 세션에 담을거다.
+
+여기서 기억해야 될 것은 req.session object를 가지고 있다는것 각유저마다
+
+로그인 하면이니깐 postLogin에서 처리해야될것같다.
+
+export const postLogin = async (req, res) => {
+  const { username, password } = req.body;
+  const pageTitle = "Login";
+  const user = await User.findOne({ username });
+  if (!user) {
+    return res.status(400).render("login", {
+      pageTitle,
+      errorMessage: "An account with this username dose not exists.",
+    });
+  }
+  const ok = await bcrypt.compare(password, user.password);
+  if (!ok) {
+    return res.status(400).render("login", {
+      pageTitle,
+      errorMessage: "Wrong Password",
+    });
+  }
+  req.session.loggenIn = true;
+  req.session.user = user;
+  return res.redirect("/");
+};
+
+이와 같이 해준다.
+
+그러면 login했을 때 session의 출력은 다음과 같이 나온다.
+
+스크린샷, 2022-01-22 00-04-15.png
+
+이제 백엔드에 어디를 이동하는 간에 로그인했다는 정보를 알고 있다.
+
+base.pug도 다음과 같이 수정해줘야한다.
+
+base.pug
+
+doctype html
+html(lang="ko")
+    head
+        title #{pageTitle} | Wetube
+        link(rel="stylesheet" href="https://unpkg.com/mvp.css")
+    body
+        header
+            h1=pageTitle
+            nav 
+                ul 
+                    li 
+                        a(href="videos/upload") Upload Video 
+                    if !req.session.loggedIn
+                        li 
+                            a(href="/join") Join
+                        li 
+                            a(href="/login") Login 
+                    li 
+                        a(href="/") Home
+                    li 
+                        a(href="/search") Search
+        main
+            block content
+    include partials/footer.pug
+    
+하지만 이렇게 하면 오류가 난다.
+
+백엔드에서 가지고있는 session정보를 pug 템플릿과 공유하지 못해서 그렇다.
+
+Response Object에서 locals를 살펴보자.
+
+찾아보면 locals: [Object: null prototype] {},
+
+으로 되어 있을 것이다.
+
+pug template에서 locals에 접근할수 있기 때문에 이것은 좋은 소식이다.
+
+locals에 넣어준다면 모든 template에서 사용할 수 있다.
+
+이걸이용해서 global Middleware를 만들어 줄것이다.
+
+middlewares.js
+
+export const localsMiddleware = (req, res, next) => {
+  res.locals.siteName = "Wetube";
+  res.locals.loggedIn = Boolean(req.session.loggedIn);
+  res.locals.loggedInUser = req.session.user;
+  next();
+};
+
+
+
+이 middleware의 경우 route전에 넣어야 하지만, session을 use하기 전에 넣어버리면 사용하지 못한다. 
+
+여기서 res.locals.loggedIn = Boolean(req.session.loggedIn);이렇게 했는데
+req.session.loggenIn이 True, False만 있는게 아니라 undefined일 수도 있기 때문에 이렇게 해줘야 한다.
+
+이렇게 넣어주면 다음과 같이 사용이 가능하다.
+
+base.pug
+
+doctype html
+html(lang="ko")
+    head
+        title #{pageTitle} | #{siteName}
+        link(rel="stylesheet" href="https://unpkg.com/mvp.css")
+    body
+        header
+            h1=pageTitle
+            nav 
+                ul 
+                    li 
+                        a(href="videos/upload") Upload Video 
+                    if loggedIn
+                        li 
+                            a(href="/logout") Log Out 
+                        li 
+                            a(href="/my-profile") #{loggedInUser.name}의 Profile
+                    else 
+                        li 
+                            a(href="/join") Join
+                        li 
+                            a(href="/login") Login 
+                    li 
+                        a(href="/") Home
+                    li 
+                        a(href="/search") Search
+        main
+            block content
+    include partials/footer.pug
+
+Recap 다시 보기.
+
+http는 기본적으로 stateless이다.
+
+session data가 쿠키안에 저장되지 않는다.
+sessionID만 저장된다.
+
+session data의 경우 server-side에 저장된다.
+
+다른 주의사항은 서버에 저장되는 default session sotrage는 MermoryStore이고,
+실제 사용하기 위해 있는건 아니다.
+
+그래서 우리는 session store를 사용해야 한다.
+세션을 데이터베이스에 저장해야 하는 것이다.
+
+connect-mongo는 세션을 MongoDB에 저장한다.
+그래서 서버를 재시작한다고해도 세션이 데이터베이스에 저장되어 있기 때문에 누군가 로그인 되어 있어도 잊어버리지 않는다.
+
+npm i connect-mongo
+
+MongoSotre를 import하는 법은 다음과 같다.
+
+import MongoSotre from "connect-mongo"
+
+mongo database의 URL을 가지고 있는 configuration object를 만들어야 한다.
+
+db.js에 있다.
+
+session middleware는 option 하나가 있는데 바로 store이다.
+default로 설정된 것과는 다른 store를 설정할 수 있다.
+
+server.js
+
+app.use(
+  session({
+    secret: "Hello!",
+    resave: true,
+    saveUninitialized: true,
+    store: MongoSotre.create({ mongoUrl: "mongodb://127.0.0.1:27017/wetube" }),
+  })
+);
+
+
+이제 세션이 MongoDBdatabase에 저장된다.
+
+세션은 브라우저가 우리의 backend를 방문할 때 만들어진다.
+
+스크린샷, 2022-01-24 16-14-54.png
+
+ISODate같은 경우 이 날 짜 이후로 잊어버리겠다는 것이다.
+
+이제 서버를 껐다가 켜도 계속해서 로그인이 되어 있다.
+
+만약 저 마지막줄을 지우면 세션은 서버의 메모리에 저장된다.
+그러면 서버를 재시작 할 때마다 메모리가 지워지기 때문에 세션을 데이터베이스에 넣는것이다.
+
+resave와 saveUnintialized를 알아볼건데,
+
+session authentication(인증)을 사용하면서 생길 수도 있는 문제에 대해서도 알아보자.
+
+만약 로그인을 목적으로 방문한게 아니라 웹사이트를 구경만하려고 방문했다고 생각해보자.
+
+이런 사람들한테도 세션은 넘어가고 데이터베이스에 저장이 될 것이다.
+
+그래서 이 모든 session을 DB에 모두 저장하는 방식은 좋지 않다.
+
+로그인한 사용자의 session만 저장하는게 좋을것이다.
+
+그래서 방문자한테는 쿠키를 주지않고 사용자에 대해서만 쿠키를 주게하는것이 해결책이다.
+
+app.use(
+  session({
+    secret: "Hello!",
+    resave: false,
+    saveUninitialized: false,
+    store: MongoSotre.create({ mongoUrl: "mongodb://127.0.0.1:27017/wetube" }),
+  })
+);
+
+이렇게 해두면 이제 웹사이트를 새로고침해도 쿠기를 안받는 것을 확인할 수 있다.
+saveUninitialized: false 얘는 무엇을 의미할까?
+
+세션이 새로 만들어지고 수정된 적이 없을때 uninitalized(초기화되지 않은)이다.
+새로운 세션이 있는데 수정된 적이 없으면 ...
+
+세션은 어디서 수정할까?? 한곳에서만 수정될 수 있는데
+바로 userController이다.
+
+userController.js
+
+export const postLogin = async (req, res) => {
+  const { username, password } = req.body;
+  const pageTitle = "Login";
+  const user = await User.findOne({ username });
+  if (!user) {
+    return res.status(400).render("login", {
+      pageTitle,
+      errorMessage: "An account with this username dose not exists.",
+    });
+  }
+  const ok = await bcrypt.compare(password, user.password);
+  if (!ok) {
+    return res.status(400).render("login", {
+      pageTitle,
+      errorMessage: "Wrong Password",
+    });
+  }
+  req.session.loggedIn = true;
+  req.session.user = user;
+  return res.redirect("/");
+};
+
+그래서 저 설정이 뭘하는 거냐면, 세션을 수정할 때만 세션을 DB에 저장하고 쿠키를 넘겨주는 것이다.
+
+다른 말로 표현하자면, backend가 로그인한 사용자에게만 쿠키를 주도록 설정됐다는 말.
+
+backend가 DB에 저장하는게 session인증에서의 문제점중 하나이다.
+이걸 위한 해결책이 token autentication이다.
+
+예를들어 IOS나 안드로이드 앱을 만들 때 이것들은 쿠키를 갖지 않기 때문에 token을 사용한다.
+하지만 여기선 다르다. 브라우저에서 인증을 하니깐 쿠키를 이용해서 세션 인증을 할 수 있다.
+
+브라우저에서 token을 사용해도 되지만 이건 심화 내용이고 별개의 강좌 존재..
+
+어쨋든 session authentication은 브라우저에서 잘 작동한다.
+
+
+--------------------------------------------------------------------
+Cookie Property에대해서 알아보자..
+
+name, value, domain, path, expires / max-Age가 있다.
+
+Size ... .등등
+
+먼저 Secret이다.
+
+secret은 우리가 쿠키에 sign 할 때 사용하는 string이다.
+쿠키에 sign하는 이유는 우리 backend가 쿠키를 줬다는 것을 보여주기 위함.
+왜냐면 sesion hijack(납치)라는 공격유형이 있다.
+
+누군가 너의 쿠키를 훔쳐허 너인척 할 수 있다.
+
+app.use(
+  session({
+    secret: "Hello!",
+    resave: false,
+    saveUninitialized: false,
+    store: MongoSotre.create({ mongoUrl: "mongodb://127.0.0.1:27017/wetube" }),
+  })
+);
+
+여기서 secret의 부분인데 이 string을가지고 쿠키를 sign 우리가 만든 것임을 증명할 수 있기 때문에 되도록이면 복잡한 형태로 만들어 두는게 좋다.
+
+다음은 Domain이다.
+
+Domain은 이 쿠키를 만든 backend가 누구인지 알려준다.
+
+브라우저는 Domain에따라 쿠키를 저장하도록 되어 있다.
+
+그리고 쿠키는 Domain에 있는 backend로만 전송된다.
+예를들어, localhost:4000가 이사용자에게 쿠키를 줬으면 Domain에 localhost라고 적혀있을 것이고 우리가 어떤 요청을 하던간에 쿠키가 localhost로 전송될것이다.
+즉 서버는 다른 url의 쿠키를 안받는 것이다.
+
+path는 단순히 url이다.
+
+다음으로 Expires이다.
+
+쿠키를 살펴보면 다음과 같다. 
+
+스크린샷, 2022-01-24 16-39-59.png
+
+현재 Session이라고 되어 있는데 이 쿠키는 만료 날짜가 명시되어 있지 않는것이다.
+
+만약 서버에서 만료날짜를 지정하지 않으면 이건 session cookie로 설정되고,
+사용자가 닫으면 session cookie는 끝나게 된다.
+
+예를 들어, 몇몇브라우저에서 프로그램 닫는다거나 컴퓨터를 재시작 할 때 세션이 사라진다.
+
+Max-Age는 말그대로 언제 세션이 만료되는지 알려준다.
+
+하지만 위에서 backend를 보면 expires라는 만료 날짜가 적혀있다.
+
+MaxAge는 쿠키가 얼마나 오래 있을수 있는지 알려주는거고, 값은 1/1000초 단위로 쓰면 된다.
+
+app.use(
+  session({
+    secret: "Hello!",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 2000,
+    },
+    store: MongoSotre.create({ mongoUrl: "mongodb://127.0.0.1:27017/wetube" }),
+  })
+);
+
+이런식으로 주면된다.
+
+다음으로, 우리는 url을 보호해야한다.
+
+secret의 string도 마찬가지이다.
+
+이걸 위해 enviornment file(환경변수)를 만들 수 있다.
+
+.env에는 코드에 들어가면 안되는 값들을 추가한다.
+관습적으로 env파일에 추가하는 모든 건 대문자로 적어야 한다.
+env파일을 만들었으면, 여기에 모든 API key나 모든 비밀로 해야하는 url을 넣어주면된다.
+env파일을 만들때 package.json옆에 두어야 되는것에 주의하자.
+
+.env
+
+COOKIE_SECRET=asdlnfklasidhjkfbklasjdnfjionxcova
+DB_URL=mongodb://127.0.0.1:27017/wetube
+
+.env file로 접근은 어떻게 할 까?
+
+app.use(
+  session({
+    secret: process.env.COOKIE_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    store: MongoSotre.create({ mongoUrl: process.env.DB_URL }),
+  })
+);
+
+이와 같은 오류가 발생했다.
+
+스크린샷, 2022-01-24 16-52-29.png
+
+console.log로 확인해보면 undefined라고 뜬다.
+
+dotenv를 사용할 것이다.
+
+이 Pacage는 너의 env파일을 읽고 각각의 변수들을 process.env안에 넣는다.
+
+npm i dotenv
+
+As early as possible in your application, require and configure dotenv.
+
+require("dotenv").config();
+
+pakage.json을 가보면 
+  "scripts": {
+    "dev": "nodemon --exec babel-node src/init.js"
+  },
+  
+즉 나는 src/init.js가 가장 먼저 시작된다.
+
+따라서 init.js의 맨처음에 넣어준다.
+
+될거 같앗는데 여전히 같은 오류가 나온다.
+
+두가지 방법으로 import하는게 문제일 것이다.
+
+하나는 require이고 하는 import로 하고 있어서 그런것이다.
+
+모든 파일 위에 사용해야 한다. 하지만 이것은 번거롭다.
+process.env를 사용하는 모든 파일 위에 ..
+
+import "dotenv/config";
+
+다음으로 할 것은 github Login인데 깃헙 로그인은 token하고 secret등을 필요로 한다.
+
+
+
+
+
+
+
+
+
+
+
+
+웹사이트에 소셜 로그인을 구현하는 법을 배워보자.
+
+그중에서 깃헙을 사용할거고 깃헙 로그인의 경우 parameter들이 있는데 특이하다.
+
+하지만 다른 SNS랑 흐름은 비슷하다.
+
+https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps
+
+로그인 과정은 이와 같다.
+
+만약 깃헙으로 로그인하고 싶다면 서버가 하는건 사용자를 깃헙으로 보내는 것이다.
+
+우리에게 정보를 공유하느 승인하게 될 것인데 그러면 깃헙은 사용자를 우리 웹사이트로 돌려보낸다.
+
+그 단계가 되면, 깃헙은 사용자를 token과 함께 redirect시킨다.
+
+그러면 우리가 그 token으로 사용자의 정보를 받아오는것이다.
+
+이 token은 매우 빠르게 만료된다.
+
+먼저 Github Application이 있어야하는데 Settings -> developer settings를 눌러주면 된다.
+
+https://github.com/settings/apps
+
+OAuth Apps를 눌러서 Register a new application을 해주면된다.
+스크린샷, 2022-01-24 17-18-04.png
+
+이거같은 경우 뒤에 URL은 아무거나 넣어주면 된다.
+
+순서를 다시 한번 보자.
+
+1단계. 사용자들은 깃헙 신원을 요청하기 위해 redirect됩니다.
+
+즉, 사용자를 깃헙으로 redirect 시켜야 한다.
+
+login.pug
+
+extends base
+
+
+block content
+    if errorMessage
+        span=errorMessage
+    form(method="POST")
+        input(placeholder="Username", name="username", type="text", required)
+        input(placeholder="Password", name="password", type="password", required)
+        input(type="submit", value="Login")
+        br
+        a(href="https://github.com/login/oauth/authorize") Continue with Github &rarr;
+    hr
+    div
+        span Don't have an account? 
+        a(href="/join") Create one now &rarr;
+        
+
+저 페이지로 이동을 하면 다음과 같은 페이지가 나온다.
+
+스크린샷, 2022-01-24 17-22-36.png
+
+이것은 우리가 parameter를 안보내줘서 그렇다.
+
+그중 하나가 client_id이다.
+
+ a(href="https://github.com/login/oauth/authorize?client_id='clientID'") Continue with Github &rarr;
+
+'clientID'부분에 client_id가 들어가면 되고 이것은 아까 만든 application에 가면 있다.
+
+clientID를 추가하고 나서 페이지 이동을 하면 다음과 같은 페이지가 나온다.
+
+스크린샷, 2022-01-24 17-26-43.png
+
+여기서 보면 Public data only부분을 보면 보내주는 데이터가 있는데 사용자의 이메일을 알고 싶다 우리는
+
+즉, 우리가 더 많은 정보를 요청해야 한다는 것이다.
+
+그래서 scope에 뭔가를 전송해야한다.
+
+a(href="https://github.com/login/oauth/authorize?client_id=e016a15085a56b667b42&scope=") Continue with Github &rarr;
+
+공백으로 구분된 scope를 보내는 것이다.
+
+scope에는 사용자에 대해 어디까지 알 수 있는지 적으면 된다.
+
+다른걸로는 여러가지 있는데 allow_signup을 볼 수 있다.
+
+이건 예를들어 사용자가 깃헙 계정이 없다면 계정생성 할 수 있게 할래 아니면 이미 계정이 있는 사람만 하게 할래를 결정하는 것이다.
+
+scope는 유저에게서 얼마나 많이 정보를 읽어내고 어떤 정보를 가져올 것에 대한 것이다.
+
+당연히 필요한 정보만 요청하도록 해야한다.
+
+https://docs.github.com/en/developers/apps/building-oauth-apps/scopes-for-oauth-apps
+
+현재 원하는 것이 user를 읽을 수 있어야 하고, user의 email을 가져오는 것이다.
+
+read:user, user:email
+
+내가 Github랑 대화할 때 "난 이런 이런 정보를 원해"라고 요구하는 것과 같다.
+
+내가 어떤 정보를 요청하느냐에 따라 user는 승인을 받게 되고 Github는 너에게 정보에 접근할 수 있도록 토큰을 줄거다. 전부 URL에 기반하고 있다.
+
+여러 개를 쓰고 싶을 때는 띄어쓰기로 구분한다.
+
+저 상태로 URL을 계속 쓰면 문제가 있다. 따로 분리해서 쓰는것이 좋아보인다.
+
+먼저 URL을 바꿔주자.
+
+login.pug
+
+a(href="/users/github/start") Continue with Github &rarr;
+
+
+userRouter.js
+
+userRouter.get("/github/start", startGithubLogin);
+
+
+그리고 나서 redirect를 사용하면 될 것같다.
+
+userController.js
+
+export const startGithubLogin = (req, res) => {
+  const baseUrl = `https://github.com/login/oauth/authorize`;
+  const config = {
+    clientId: "e016a15085a56b667b42",
+    allow_signup: false,
+    scope: "read:user user:email",
+  };
+  const params = new URLSearchParams(config).toString();
+  const finalUrl = `${baseUrl}?${params}`;
+  return res.redirect(finalUrl);
+};
+
+URLSearchParams를 이용해서 다음과 같이 하면된다.
+
+스크린샷, 2022-01-24 21-46-36.png
+
+
+이제 다 됐다 이동하고나서 Authorize를 눌러보자..
+
+스크린샷, 2022-01-24 21-56-47.png
+
+그러면 다음과 같은 URL로 이동하면서 이런 화면이 나온다.
+
+스크린샷, 2022-01-24 21-57-38.png
+
+이 URL의 경우 settings에서 만들어 줄 때 설정해둔 Authorization callback URL 이 url에서 code가 추가된것이다.
+
+이화면은 github에서 error가 난것이 아니라 Router에 /users/github/callback URL이 없기 때문이다.
+
+router.js에 추가해주고 controller에 만든다
+
+userRouter.get("/github/finish", finishGithubLogin);
+
+생략,
+
+이제 github에서 받은 토큰을 Access토큰으로 바꿔 줘야 한다.
+
+우선 다음과 같은 parameter들과 함께 POST요청을 보내야한다.
+
+client_id , client_secret, code
+
+client_id는 두번이나 쓰였으니 .env파일에 넣어두자.
+
+어차피 URL에 보여서 비밀로 할건 아니지만, 이렇게 하는 이유는 한 장소에 넣음으로서 어디서든지 값을 사용할 수 있게 해주기 위함이다.
+
+client_id: process.env.GH_CLIENT,
+
+다음으로 client_secret이 필요한데 이건 오로지 백엔드에만 존재해야되는 secret이다.
+
+이 값은 누구도 봐서는 안된다. 
+스크린샷, 2022-01-24 22-14-50.png
+
+여기서 만들면 된다. 만들고 .env안에 넣어두자.
+
+이제 config객체에 넣어주면 된다.
+
+export const finishGithubLogin = (req, res) => {
+  const baseUrl = "https://github.com/login/oauth/access_token";
+  const config = {
+    client_id: process.env.GH_CLIENT,
+    client_secret: process.env.GH_CLIENT,
+    code: req.query.code,
+  };
+  const params = new URLSearchParams(config).toString();
+  const finalUrl = `${baseUrl}?${params}`;
+};
+
+이 경우에는 redirect 시키진 않는다. 어디에도 가지 않는다.
+
+그냥 POST request를 보내기만 할 것이다.
+
+vanillaJS 에서 fetch
+
+무언가를 하고 싶거나 무언가를 가져오고 싶을 때 쓴다.
+
+POST를 쓰고 있고, URL에 뭔가를 보내고 있다.
+
+export const finishGithubLogin = async (req, res) => {
+  const baseUrl = "https://github.com/login/oauth/access_token";
+  const config = {
+    client_id: process.env.GH_CLIENT,
+    client_secret: process.env.GH_CLIENT,
+    code: req.query.code,
+  };
+  const params = new URLSearchParams(config).toString();
+  const finalUrl = `${baseUrl}?${params}`;
+  const data = await fetch(finalUrl, {
+    method: "POST",
+    headers: {
+      Accept: "application / json",
+    },
+  });
+  const json = await data.json();
+  console.log(json);
+  res.send(JSON.stringify(json));
+
+};
+
+
+이렇게 하면 된다.
+
+finalURL에 POST요청을 보낼거고 
+
+fetch를 통해 데이터를 받아오고 그 데이터에서 JSON을 추출할 것이다.
+그리고 JSONdmf return 받기 위해서 이걸 보내야 한다.
+      Accept: "application / json",
+이걸 보내지 않으면 Github가 text로 응답한다.
+
+이렇게 하고 실행하면 다음과 같은 에러가 나온다.
+
+스크린샷, 2022-01-24 22-45-16.png
+
+fetch가 동작하지 않는 이유는 브라우저에서만 사용 가능하기 때문이다.
+
+fetch기능이 NodeJS에는 포함되어 있지 않다는 것이다.
+
+설치해주자.
+
+npm install node-fetch
+[2021.09.01] [ERR_REQUIRE_ESM] Error로 문제를 겪으시는 분들 보세요!
+오늘 node-fetch가 Version 3를 내면서
+npm install node-fetch를 하면, version 3.0.0이 설치됩니다.
+수업에서 사용하는 버전은 2.6.1이구요
+Version 3으로 설치되어 실행시키면, 아마 [ERR_REQUIRE_ESM] 가 뜰겁니다.
+이것은 node-fetch가 Version 3부터는 ESM-only Module이어서 그런 것 같습니다. 공식문서에서는 CSM(CommonJS)를 쓰는 사람들은 버전 2로 쓸 것을 권장한다고 합니다. 이미 설치하셨으면, npm uninstall node-fetch로 제거하시고
+npm install node-fetch@2.6.1 명령어 실행하시면 강의처럼 잘 굴러갑니다.
+참고바랍니다. 아마 오늘 이후로 들으시는 분들 강의내용 그대로 따라하시면 모두 겪을 문제같아서 공유합니다.
+
+
+스크린샷, 2022-01-24 23-02-07.png
+
+설치를 하고 실행 해주면 다음과 같이 나온다.
+
+스크린샷, 2022-01-24 23-07-00.png
+
+에러가 보이지만 정상적으로 작동하고 있는 것이다.
+
+프론트엔드에선이렇게 보인다.
+
+스크린샷, 2022-01-24 23-11-57.png
+
+이제 3단계로 넘어갈 차례다.
+
+3단계는 access_token을 갖고 API에 접근하는 것이다.
+
+이제 access_token을 가지고 user의 정보를 얻을 수 있다.
+
+빠르게 복습해보면
+
+Github에 user를 보내고 user가 Github에서 "예'라고 하면 Github는 코드를 줄거다.
+
+그리고 그 코드를 가지고 access_token으로 바꿨다. 그럼 access_token으로 Github API를 사용해 user정보를 가져올 것이다. 
+
+이제 해야될 것은
+
+JSON에 있는 access_token을 가져와야한다.
+
+if ("access_token" in json) {
+  //access api
+} else {
+  return res.redirect("/login");
+}
+
+이런식으로 하면 된다.
+
+access_token이 없으면 login page 로 redirect된다.
+  
+근데 이렇게하면 user에게 notification을 못 보여준다.
+
+return res.redirect("/login");
+여기서 만약 render를 사용한다면 
+
+http://localhost:4000/users/github/finish?code=75056fd74a695db01aeb
+
+이러한 복잡한 url을 유저가 보게된다.
+
+코드에서 이미 토큰이 사용되었다면 위에 봤던 에러가 발생하는 것이다. 
+bad_verification_code
+
+3단계는 
+
+get URL을 통해서 인증을 위한 access_toekn을 보내줘야 한다
+    const { access_token } = json;
+    const userRequest = await fetch("https://api.github.com/user", {
+      headers: {
+        Authorization: `token ${access_token}`,
+      },
+    });
+    
+access_token을 JSON으로부터 꺼내서,
+headers에 authoriztion을 보내야 한다.
+
+access_token을 fetch안의 headers로 보내자.
+
+await가 두번 중복 되는데 아래와 같이 해서 코드를 줄이자.
+
+  const tokenRequest = await (
+    await fetch(finalUrl, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+      },
+    })
+  ).json();
+
+
+이렇게 했을 때 결과를 보자.
+
+export const finishGithubLogin = async (req, res) => {
+  const baseUrl = "https://github.com/login/oauth/access_token";
+  const config = {
+    client_id: process.env.GH_CLIENT,
+    client_secret: process.env.GH_SECRET,
+    code: req.query.code,
+  };
+  const params = new URLSearchParams(config).toString();
+  const finalUrl = `${baseUrl}?${params}`;
+  const tokenRequest = await (
+    await fetch(finalUrl, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+      },
+    })
+  ).json();
+  console.log(tokenRequest);
+  if ("access_token" in tokenRequest) {
+    const { access_token } = tokenRequest;
+    const userRequest = await (
+      await fetch("https://api.github.com/user", {
+        headers: {
+          Authorization: `token ${access_token}`,
+        },
+      })
+    ).json();
+    console.log(userRequest);
+  } else {
+    return res.redirect("/login");
+  }
+};
+
+
+스크린샷, 2022-01-24 23-42-06.png
+스크린샷, 2022-01-24 23-42-37.png
+
+fetch를 요청 -> fetch가 돌아오면 해당 fetch의 JSON을 받게된다.
+
+순서대로 보자.
+
+continue with Github -> 를 누르면
+code를 access_token으로 바꾼다음에
+그걸 이용해 Github API로 갈거고 그러면 user데이터를 볼 수 있다.
+
+github profile 정보를 볼 수 있는것이다.
+
+문제는 좀 자세히 보면 email이 null이라는 것이다.
+
+email이 없거나 private라는 뜻이다.
+
+그래서 null일때를 대비해서 다른 request도 만들어야 한다.
+
+Github API를 가보면 여러가지를 할 수 있는 것들이 적혀있는데,
+
+사용하려면 access_token이 할 수 있도록 만들어 줘야한다. 그럴라면??? scope에 적어줘야한다.
+
+scope에 적은 내용에 대해서만 허용해준다.
+
+현재로써는 scope에 적은 내용을 github에서 코드로 주는건데 그 코드에는 이미 너가 하고자 하는 바가 명시되어 있다.
+
+넌 그 코드를 access_token으로 바꾸게 되고 access_token은 너가 한다고 한 것만 한다.
+
+scope를 보면 다음과 같이 해놓았다.
+
+    scope: "read:user user:email",
+    
+지금 현재 우리가 access_token을 가지고 하려는건 이 첫번째 scope이다.
+
+user의 정보를 읽어들이고 있는 것이다.
+
+하지만 두번째 파트인 eamil을 읽어들이고 있지 않다.
+
+그래서 변수명을 다음과 같이 바꿔주고
+
+    const userData = await (
+      await fetch("https://api.github.com/user", {
+        headers: {
+          Authorization: `token ${access_token}`,
+        },
+      })
+    ).json();
+    console.log(userData);
+    
+
+
+  if ("access_token" in tokenRequest) {
+    const { access_token } = tokenRequest;
+    const emailData = await (
+      await fetch(`${apiUrl}/user/emails`, {
+        headers: {
+          Authorization: `token ${access_token}`,
+        },
+      })
+    ).json();
+
+
+결과는 다음과 같이 나왔다.
+	
+스크린샷, 2022-01-25 00-03-47.png
+
+
+email이 verified이면서 primary인 것들을 찾아야 한다.
+
+    const emailObj = emailData.find(
+      (email) => email.primary === true && email.verified === true
+    );
+    
+로그인 규칙을 어떻게 만들 것인가
+
+예를 들어, 데이터베이스에 user가 하나 있는데,
+
+이 user가 username과 password도 있고 email도 있다. 
+이 유저가 만약 github로 로그인하기를 누르고 토큰 작업등 전부 거친뒤 Github으로 로그인한 user는
+데이터베이스 상에 똑같은 email과 password를 가진 user를 받을 것이다.
+
+두가지를 생각해 볼 수 있다.
+
+이미 password가 있으니 그걸로 로그인해라고 말할수 있고,
+
+혹은 똑같은 email이 있다는걸 증명했으니 Github로 로그인 해도 되게 할 수 있다.
+
+스크린샷, 2022-01-25 00-18-44.png
+
+만일 user가 다른 무언가로 로그인을 했다면 예를 들어 너가 카카오톡으로 로그인 했다하면 카카오톡이 이런 식으로 너에게 email을 줄거다. 
+
+그치만 몇몇 사이트들은 password로 계정을 만들게 하는 곳도 있다.
+
+우리는 Github로그인 같은 소셜 로그인을 할 때 만일 너가 이 email에 접근 권한이 있다는게 증명이 된다면 즉, password가 있거나 Github의 email이 verified 된거라면 너가 email의 주인이라는 뜻이니깐 널 로그인 시켜 줄 수 있다.
+
+primary와 verified가 true면 email이 있으니 로그인 시켜주는것이다.
+만약, Github login으로 계정을 만든 user가 있을 때 email은 있지만 password가 없는 경우다.
+이럴 때는 로그인 화면에서 user에게 이렇게 말해야 된다.
+
+email은 있는데 password는 없어 이건 그들이 Github으로 로그인 해야 한다는 뜻이다.
+
+export const finishGithubLogin = async (req, res) => {
+  const baseUrl = "https://github.com/login/oauth/access_token";
+  const config = {
+    client_id: process.env.GH_CLIENT,
+    client_secret: process.env.GH_SECRET,
+    code: req.query.code,
+  };
+  const params = new URLSearchParams(config).toString();
+  const finalUrl = `${baseUrl}?${params}`;
+  const tokenRequest = await (
+    await fetch(finalUrl, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+      },
+    })
+  ).json();
+  console.log(tokenRequest);
+  if ("access_token" in tokenRequest) {
+    const { access_token } = tokenRequest;
+    const apiUrl = "https://api.github.com";
+    const userData = await (
+      await fetch(`${apiUrl}/user`, {
+        headers: {
+          Authorization: `token ${access_token}`,
+        },
+      })
+    ).json();
+    console.log(userData);
+    const emailData = await (
+      await fetch(`${apiUrl}/user/emails`, {
+        headers: {
+          Authorization: `token ${access_token}`,
+        },
+      })
+    ).json();
+    const emailObj = emailData.find(
+      (email) => email.primary === true && email.verified === true
+    );
+    if (!emailObj) {
+      return res.redirect("/login");
+    }
+    const existingUser = await User.findOne({ email: emailObj.email });
+    if (existingUser) {
+      req.session.loggedIn = true;
+      req.session.user = user;
+      return res.redirect("/");
+    } else {
+      // create an account
+    }
+  } else {
+    return res.redirect("/login");
+  }
+};
+
+여기서  // create an account 이부분은
+
+해당 email로 user가 없으니깐 계정을 생성해야되는 부분이다.
+
+여기를 하기전에 User Model Schema에 githubId를 추가했다.
+
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  githubId: { type: Number },
+  username: { type: String, required: true, unique: true },
+  password: { type: String },
+  name: { type: String, required: true },
+  location: String,
+});
+
+이렇게 하는 이유는 user가 github로 로그인했는지 여부를 알기 위해서이다.
+
+     else {
+      const user = await User.create({
+        name: userData.name,
+        username: userData.login,
+        email: emailObj.email,
+        password: "",
+        socialOnly: true,
+        location: userData.location,
+      });
+            req.session.loggedIn = true;
+      req.session.user = user;
+      return res.redirect("/");
+     }
+
+
+스크린샷, 2022-01-25 00-40-21.png
+
+성공적으로 생성됐다. 그리고 password는 없는것이다. 비어있는 해시값이다.
+
+
+지금 상황은 다음과 같다.
+
+github이 주는 user의 eamil을 쓰겠다는 것이다.
+primary이면서 verified된 email을 찾아서 말이다.
+만일 찾았을 경우, 그 email을 데이터베이스에서 찾을 것이다.
+만일 그 유저를 찾았다면 로그인 시킨다. 
+
+누가 로그인 되는가?
+
+먼저 github로 계정을 만든 사람이거나 username과 password로 계정을 만든 사람이 있는데 두가지 경우 모두 로그인 된다. 왜냐하면 같은 eamil이니깐
+
+그래서 username과 password로 계정을 만든 사람의 경우 github를 통해서도 로그인이 가능하다.
+
+왜냐하면, 데이터베이스에 있는 eamil과 github에 있는 email이 같다.
+(이런식으로 카카오톡 계정 생성도 가능)
+
+export const finishGithubLogin = async (req, res) => {
+  const baseUrl = "https://github.com/login/oauth/access_token";
+  const config = {
+    client_id: process.env.GH_CLIENT,
+    client_secret: process.env.GH_SECRET,
+    code: req.query.code,
+  };
+  const params = new URLSearchParams(config).toString();
+  const finalUrl = `${baseUrl}?${params}`;
+  const tokenRequest = await (
+    await fetch(finalUrl, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+      },
+    })
+  ).json();
+  if ("access_token" in tokenRequest) {
+    const { access_token } = tokenRequest;
+    const apiUrl = "https://api.github.com";
+    const userData = await (
+      await fetch(`${apiUrl}/user`, {
+        headers: {
+          Authorization: `token ${access_token}`,
+        },
+      })
+    ).json();
+    const emailData = await (
+      await fetch(`${apiUrl}/user/emails`, {
+        headers: {
+          Authorization: `token ${access_token}`,
+        },
+      })
+    ).json();
+    const emailObj = emailData.find(
+      (email) => email.primary === true && email.verified === true
+    );
+    if (!emailObj) {
+      return res.redirect("/login");
+    }
+    const existingUser = await User.findOne({ email: emailObj.email });
+    if (existingUser) {
+      req.session.loggedIn = true;
+      req.session.user = existingUser;
+      return res.redirect("/");
+    } else {
+      const user = await User.create({
+        name: userData.name,
+        username: userData.login,
+        email: emailObj.email,
+        password: "",
+        socialOnly: true,
+        location: userData.location,
+      });
+      req.session.loggedIn = true;
+      req.session.user = user;
+      return res.redirect("/");
+    }
+  } else {
+    return res.redirect("/login");
+  }
+};
+
+여기서 코드 정리를 좀 하자면 
+      req.session.loggedIn = true;
+      req.session.user = user;
+      return res.redirect("/");
+      
+이부분이 겹친다.
+
+export const finishGithubLogin = async (req, res) => {
+  const baseUrl = "https://github.com/login/oauth/access_token";
+  const config = {
+    client_id: process.env.GH_CLIENT,
+    client_secret: process.env.GH_SECRET,
+    code: req.query.code,
+  };
+  const params = new URLSearchParams(config).toString();
+  const finalUrl = `${baseUrl}?${params}`;
+  const tokenRequest = await (
+    await fetch(finalUrl, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+      },
+    })
+  ).json();
+  if ("access_token" in tokenRequest) {
+    const { access_token } = tokenRequest;
+    const apiUrl = "https://api.github.com";
+    const userData = await (
+      await fetch(`${apiUrl}/user`, {
+        headers: {
+          Authorization: `token ${access_token}`,
+        },
+      })
+    ).json();
+    const emailData = await (
+      await fetch(`${apiUrl}/user/emails`, {
+        headers: {
+          Authorization: `token ${access_token}`,
+        },
+      })
+    ).json();
+    const emailObj = emailData.find(
+      (email) => email.primary === true && email.verified === true
+    );
+    if (!emailObj) {
+      return res.redirect("/login");
+    }
+    let user = await User.findOne({ email: emailObj.email });
+    if (!user) {
+      user = await User.create({
+        name: userData.name,
+        username: userData.login,
+        email: emailObj.email,
+        password: "",
+        socialOnly: true,
+        location: userData.location,
+      });
+    }
+    req.session.loggedIn = true;
+    req.session.user = user;
+    return res.redirect("/");
+  } else {
+    return res.redirect("/login");
+  }
+};
+
+다음 섹션에서 avater_url을 써야 하기 때문에 users schema에 추가한다.
+
+  avaterUrl: { type: String },
+
+
+    if (!user) {
+      user = await User.create({
+        name: userData.name,
+        avaterUrl: userData.avaterUrl,
+        username: userData.login,
+        email: emailObj.email,
+        password: "",
+        socialOnly: true,
+        location: userData.location,
+      });
+    }
+    
+
+이제 로그아웃 페이지를 만들면된다.
+
+export const logout = (req, res) => {
+  req.session.destroy();
+  return res.redirect("/");
+};
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,441 @@
+res.send()를 이용해서 HTML 코드를 실행하기엔 HTML가 너무 클 것이다.
+
+So, 사용하는 것이 pug이다.
+
+pug는 템플릿 엔진이고, 템플릿을 이용해서 뷰를 만드는 것이다.
+
+pug 설치는 다음과 같다.
+
+npm i pug
+
+설치가 끝나면 Express에게 html helper로 pug를 쓰겠다고 말하면 된다.
+
+view engine을 설정하면 된다.
+
+app.set("view engine", "pug");
+
+기본적으로 Express는 views 폴더 안에 있는 파일을 찾기 때문에 views폴더를 생성 후 pug파일을 만들면 된다.
+
+pug에 맞는 문법을 사용해서 작성후 render을 해줘야 하는데 렌더링 해주는 얘는 controller이다.
+
+controller.js
+
+export const home = (req, res) => res.render("home");
+
+router.js
+
+const globalRouter = express.Router();
+
+globalRouter.get("/", home);
+
+export default globalRouter;
+
+이런식으로 활용하면 된다.
+
+이 파일이 유저한테 가는 과정은 다음과 같다.
+
+우선 pug로 보내고, pug가 이 파일을 렌더링해서 평범한 html로 변환해 준 후, 유저가 보게 된다.
+
+위의 과정을 거치고 나서 실행을 하면 오류가 나오는데 오류는 다음과 같다.
+
+스크린샷, 2022-01-11 00-29-15.png
+
+youtube-clone/views로 되어있는데 youtube-clone/src/views 이런식으로 하고 싶은 것이다.
+
+Express가 views를 탐색하는 것은 기본적으로 현재 작업 디렉토리에서 views라는 디렉토리를 찾는다.
+
+console.log(process.cwd());
+
+실행 결과 현재 작업 디렉토리(cwd)가 다음과 같이 나왔다. 
+
+/var/develop/youtube-clone
+
+package.json에서 node.js를 실행하고 있기 때문에 youtube-clone이 현재 작업 디렉토리가 된 것이다.
+
+해결 방법은 디폴트 값을 수정해주는 것이다.
+
+app.set("views", process.cwd() + "/src/views");
+
+pug는 자바스크립트이기 때문에 자바스크립트 함수를 사용할 수 있는 데 사용방법은 다음과 같다.
+
+#{function()}
+
+현재까지 한 것을 토대로 하면 다음과 같이 pug를 만들 수 있다.
+
+watch.pug
+
+doctype html 
+html(lang="ko")
+    head 
+        title Wetube 
+    body 
+        h1 Watch Video
+        footer &copy #{new Date().getFullYear()} Wetube
+
+여기서 만약에 footer이 다른 페이지에서도 사용되어 하나의 템플릿을 만들어 놓고 사용하고 싶다면?
+
+partial을 이용하면 된다.
+
+views 폴더 안에 partials 폴더를 만들어주고 footer.pug를 만들어 줬다고 하자.
+
+footer.pug 
+
+footer &copy #{new Date().getFullYear()} Wetube
+
+watch.pug
+
+doctype html 
+html(lang="ko")
+    head 
+        title Wetube 
+    body 
+        h1 Watch Video
+    include partials/footer.pug
+
+이렇게 중복되는 코드문제를 해결했다.
+
+하지만 여전히 중복되는 것이 보인다.
+
+home.pug
+
+doctype html 
+html(lang="ko")
+    head 
+        title Wetube 
+    body 
+        h1 Welcome to Wetube 
+    include partials/footer.pug
+    
+watch.pug
+    
+doctype html 
+html(lang="ko")
+    head 
+        title Wetube 
+    body 
+        h1 Watch Video
+    include partials/footer.pug
+    
+body 에서 h1부분을 빼고는 전부 다 겹치는 것을 확인 할 수 있다.
+
+이 부분은 inheritance(상속)을 이용할 수 있다.
+
+상속은 일종의 베이스를 만들어 준다.
+
+레이아웃의 베이스, 혹은 HTML의 베이스 그리고 그 베이스부터 확장해 나가는 것이다.
+
+views폴더에 base.pug를 만들고 다음과 같이 작성해 본다.
+
+doctype html 
+html(lang="ko")
+    head 
+        title Wetube 
+    body 
+        h1 base!!
+    include partials/footer.pug
+
+
+그리고 위의 home.pug와 watch.pug에는 기존 내용을 다 지우고 extend만 해놓는다.
+
+home.pug, watch.pug
+
+extends base.pug
+
+extneds 한다는 것은 베이스가 되는 파일을 가져다가 그대로 쓰는 것이다.
+
+이렇게 했을 때 home 과 watch의 url은 base!!를 보여주는 것을 확인 할 수 있다.
+
+이제 블록(block)이라는 개념을 배워서 저 부분을 페이지에 맞게 수정하면 되겠다.
+
+블록은 템플릿의 창문같은 것이다.
+
+base.pug
+
+doctype html 
+html(lang="ko")
+    head 
+        block head 
+    body 
+        block content
+    include partials/footer.pug
+
+home.pug
+
+extends base.pug
+
+block head
+	title	Home | Wetube
+
+block content
+	h1	home
+	
+이러한 식으로 처리하면 된다.
+
+정리를 좀 하자면,
+
+파일이 블록을 가진다는 건 그 파일에서 확장을 하면 그 블록안의 내용을 채울 수 있는 것이다.
+
+좀만 더 정리를 해보자.
+
+block head를 가져와서 각각 페이지 마다 title	Home | Wetube 이러한 식으로 처리를 한다면 그것도 곧 중복되는 것이 아닐까?
+
+그래서 이를 해결하기 위해서 다음과 같이 처리를 하자.
+
+먼저 페이지별 pug에 block head부분은 지우고 base.pug를 다음과 같이 한다.
+
+base.pug
+
+doctype html 
+html(lang="ko")
+    head 
+        title
+        	#{pageTitle} | WeTube
+    body 
+        block content
+    include partials/footer.pug
+    
+#{} 을 쓴다는 건 자바스크립트 코드를 쓴다고 위에서 말했다.
+
+하지만 pageTitle이라는건 존재하지 않는다. 즉, 이런 변수가 존재하지 않는 상황이다.
+
+그래서 그 변수를 보내주면 되는데, 어떻게 하면 될까?
+
+이 문제를 해결해주기 위해 먼저 생각해 볼 것은 템플릿으로 어떻게 변수를 보낼까? 이다.
+
+누가 템플릿을 렌더링하고 있을까? 이것의 답은 컨트롤러다.
+
+즉, 렌더링 하는 컨트롤러에서 변수를 보내 주면 되는것이다. 그 방식은 다음과 같이 하면 된다.
+
+export const home = (req, res) => res.render("home", {pageTitle: "Home"});
+
+첫번째 인자는 파일 이름이다. 두번째 인자는 원하는 만큼의 변수를 가질 수 있는 오브젝트다.
+
+template 섹션을 끝내야 되는데,
+
+세가지를 더 배워야 한다.
+
+1) conditionals, 2) iteration, 3) mixing
+
+더 들어가기 전에 기본 css를 입혀주는 link를 가져와서 쓰기로 하자.
+
+head에 다음과 같이 추가한다.
+
+link(rel="stylesheet" href="https://unpkg.com/mvp.css")
+
+pug의 conditionals 
+
+if나 if else를 템플릿에서 사용하여 조건에 맞을 때만 보여주는 식으로 활용이 될 것이다.
+
+먼저 conditionals를 알아보기 전에, 다음 두 가지의 차이점을 살펴보자.
+
+h1 #{pageTitle} | wetube 에서 
+
+h1 pageTitle
+
+h1=pageTitle
+
+이 두 개의 차이점은 다음과 같다.
+
++	h1 pageTitle의 경우 pageTitle 이 text로서 인식이 된다.
++	h1=pageTitle의 경우 pageTitle 이 variable로 인식이 된다. h1 #{pageTitle}과 같은 것이다.
+
+>	 다만, 위에서 h1=pageTitle처럼 하지 않는 이유는 variable를 다른 text와 섞어서 쓰고 싶지 않아서 그렇다.
+
+템플릿에 보내 줄 변수 User정보를 보내준다고 생각해 보자.
+
+controller.js 
+
+const fakeUser = {
+	username = "Beom",
+	loggedIn = false
+};
+
+export const trending = (req, res) => res.render("home", {pageTitle: "Home", fakeUser: fakeUser});
+
+여기서 ES6를 안다면, fakeUser: fakeUser 말고 fakeUser로 사용해도 된다.
+
+home.pug
+
+doctype html
+html(lang="ko")
+	head
+		title #{pageTitle} | Wetube
+		link(rel="stylesheet" href="https://unpkg.com/mvp.css")
+	body
+		header
+			if fakeUser.loggedIn
+				small Hello #{fakeUser.username}
+			nav
+				ul
+					if fakeUser.loggedIn
+						li
+							a(href="/logout") Log out
+					else
+						li
+							a(href="/login") Login
+			h1=pageTitle
+		main
+			block content
+	include partials/footer.pug
+	
+이런식으로 contionals를 사용하여 상황에 맞게 렌더링이 가능해졌다.
+
+그렇다면 Array도 처리는 어떻게 할 것인가?
+
+먼저 controller에서 Array를 생성해준다.
+
+controller.js
+
+export const trending = (req, res) => {
+	cosnt vidoes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+	return res.render("home", {pageTitle: "Home", vidoes });
+};
+
+home.pug
+
+extends base.pug
+
+block content
+	h2 Welcome here you will see the trending vidoes
+	ul
+		each video in videos
+			li=video	
+
+video 는 아무 변수 명을 사용해도 상관 없는데 videos는 controller에서 가져오는 것이므로 가져오는 변수 명과 동일해야 한다.
+
+each X in Y 
+
+Y는 array이여야 한다.
+
+이렇게 하는 법을 iteration이라고 한다.
+
+아래와 같이 contionals도 같이 사용 가능하다.
+
+		each video in videos
+			li=video	
+		else
+			li Nothing Found.
+
+여기서, 만약 video가 단순히 string이 아닌 Object형태라면?
+
+controller.js
+
+export const trending = (req, res) => {
+	const videos = [
+		{
+			title: "Hello",
+		},
+		{
+			title: "Video #2",
+		},
+		{
+			title: "WhatsUp"
+		}
+	];
+	return res.render("home", { pageTitle: "Home", videos });
+		
+이렇게 하면 아래와 같이 문자열화된 객체를 볼 수 있다.
+
+[screenshot](스크린샷, 2022-01-11 14-37-43.png)
+
+li=video 부분을 video.title로 수정하면 title이 나오게 될 것이다.
+
+좀 더 복잡한 video 객체를 다루고 위해서, mixin이라는 개념을 배워보자.
+
+mixin이라 함은, base.pug에서 봤던 partials와 같은 건데 partial이긴 한데 데이터를 받을 수 있는 partial을 말한다.
+
+먼저, controller를 다음과 같이 했다고 해보자.
+
+controller.js
+
+export const trending = (req, res) => {
+  const videos = [
+    {
+      title: "First Video",
+      rating: 5,
+      comments: 2,
+      createdAt: "2 minutes ago",
+      views: 59,
+      id: 1,
+    },
+    {
+      title: "Second Video",
+      rating: 5,
+      comments: 2,
+      createdAt: "2 minutes ago",
+      views: 59,
+      id: 1,
+    },
+    {
+      title: "Third Video",
+      rating: 5,
+      comments: 2,
+      createdAt: "2 minutes ago",
+      views: 59,
+      id: 1,
+    },
+  ];
+  return res.render("home", { pageTitle: "Home", videos });
+}
+
+
+home.pug
+
+extends base
+
+block content
+    h2 Welcome here you will see the trending videos
+    each video in videos
+    	div
+        h4=video.title
+        ul
+            li #{video.rating}/5.
+            li #{ivideonfo.comments} comments.
+            li Posted #{video.createdAt}.
+            li #{video.views} views. 
+    else
+        li Sorry nothing found.
+
+소프트웨어 개발자 혹은 풀스택 개발자처럼 생각을 해보면서,
+유튜브를 떠올려 보자.
+썸네일이 보이고, 제목, 조회수, 등이 보인다. 사이드바에도 동영상이 보이고 정보가 보이는 것을 확인 할 수 있다.
+
+즉, 이것은 이 home.pug에서 하나만 활용되는 것이 아닌 어느 곳에서나 재사용이 가능한 component라고 봐도 무방한 것이다.
+
+이때, 다른 데이터를 포함하지만 같은 형태의 HTML을 보여주는 것. 이것이 mixin이다.
+
+views/mixins/video.pug
+
+mixin video(info)
+  div
+    if  info
+      h4=info.title
+      ul
+        li  #{info.rating}/5.
+        li  #{info.comments} comments.
+        li  Posted #{info.createdAt}.
+        li  #{info.views} views.
+    else
+      h4 Sorry nothing found.
+            
+home.pug에선 객체를 보내면 된다.
+
+extends base
+include mixins/video
+
+block content
+    h2 Welcome here you will see the trending videos
+    each item in videos
+        +video(item)
+        
++MinxinName 한 다음에, 객체르 보내주면 된다.
+        
+video mixin을 사용해서, 어떤 정보를 mixin으로 보내주고 있고,
+
+그 정보를 이용해서 HTML로 나타내고 있다.
+
+
+
+
+[pug's includes](https://pugjs.org/language/includes.html)
+[pug's documentation](https://pugjs.org/language/inheritance.html)

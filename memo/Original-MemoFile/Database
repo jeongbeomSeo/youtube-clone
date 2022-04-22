@@ -1,0 +1,1181 @@
+MongoDB
+
+다목적용이고, document를 기반으로 한다.
+document-based
+
+일반적으로, database document-based가 아닌 sql-based이다.
+
+행 기반이라 할 수 있는데, 엑셀 시트를 상상해보자.
+
+MongoDB에 저장하는 것들은 JSON-like-document이다. 그러므로 행으로 된 데이터를 저장할 필요가 없다.
+
+package.json처럼 저장된다고 보면 된다.
+
+게더가, mongoDB는 document 내부를 검색할 수 있도록 해준다.
+
+검색, create, delete, edit ...
+
+mongodb설치
+
+mongodb.com으로 가서 Docs를 눌러주면, Server라는게 있다.
+
+Installation이 있다. Install MongoDB Community Edition을 클릭
+
+나와있는 명령어를 순서대로 실행.
+
+mongoose
+
+mongoose는 node.js와 mogoDB를 이어주는 다리가 된다.
+
+javaScript를 적으면 mongoose가 mongoDB로 건네준다.
+
+validation할 수 있고, query building할 수 있고, hook도 있고, 아주 많은 것 가능.
+
+우분투 20.04 버전 쓰시는 분은 참고하시고. mongdb 최신버전으로 다운하세요
+우분투 버전확인은 lsb_release -dc
+몽고db 버전확인은 mongd --version 
+
+혹시나 버전을 잘못 설치해서 재설치 하고 싶으신 분은
+sudo apt-get remove mongodb
+sudo apt-get autoremove
+입력해서 삭제해주세요
+sudo apt list --installed | grep mongo 설치된 패키지 확인하는 명령어 인데요
+입력후 mongo로 시작 되는 것이 없다면 제거 성공하신 겁니다.
+
+설치방법은 https://velog.io/@seungsang00/Ubuntu-MongoDB-%EC%84%A4%EC%B9%98%ED%95%98%EA%B8%B0-Ubuntu-20.04 참고하시면 됩니다.
+
+시작 sudo service mongodb start ->성공하면 우측에 [ok] 실패면 [fail]이 뜹니다.
+mongo를 입력해서 mongo shell에 접속
+중지는 sudo service mongodb stop
+
+만약 start 했는데 fail이 뜬다면 cd / 입력해서 root로 가신 후에
+sudo cat var/log/mongodb/mongodb.log 를 입력하면 로그가 뜨는데,
+맨 하단에 aborting after fassert() failure 가 나온다면
+sudo rm /tmp/mongodb-27017.sock 입력 후 다시 start 하세요.
+
++만약에 sudo service mongodb start를 하지 않은 상태에서 mongod 나 mongo 를 입력하면 위에 적은 오류가 발생합니다
+
+-------------------------------------
+
+mongo를 입력하면 mongoDB shell이랑 연결을 해준다.
+
+help를 입려해서 명령어를 확인할 수 있다.
+
+mongoose를 설치하자.
+
+npm i mongoose
+
+server.js있는 폴더에 db.js를 생성해주고 컴퓨터에 실해오디고 있는 mongo database에 연결해 줄 것이다.
+
+mongo 명령어를 console에서 실행시켜서, url을 받아와야 한다.
+
+db.js
+
+import mongoose from "mongoose";
+
+mongoose.connect("mongodb://127.0.0.1:27017/nameofdatabase")
+
+nameofdatabase엔 database이름이 들어가면 된다.
+
+생성된 db.js는 아직 하는게 없다. 왜냐하면 서버(server.js)에 연결되어 있지 않기 때문이다.
+
+server.js
+
+import "./db.js";
+
+이후 db에서 options을 주라고 warning이 뜨면 option을 주면된다.
+
+datbase에서 event가 발생할 것을 생각해보면, error가 발생할 가능성이 있으니 무슨 에러가 뜨는지 출력시켜주기 위해 다음과 같이 하고, connection을 여는 때도 생각해 볼 수 있으니, console.log를 해준다.
+
+db.js
+
+import mongoose from "mongoose";
+
+mongoose.connect("mongodb://127.0.0.1:27017/wetube", {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
+
+const db = mongoose.connection;
+
+const handleOpen = () => console.log("✅ Connected to DB");
+const handleError = (error) => console.log("❌ DB Error", error);
+
+db.on("error", handleError);
+db.once("open", handleOpen);
+
+
+on vs once
+
+on은 여러번 발생하는 것이다. 즉, 클릭할 때마다 발생하는 것이라고 생각하면 되고, once는 오로지 한번만 발생한다.
+
+CRUD을 목표로한다.
+
+C는 create(생성), R은 read(읽기), U는 update(수정), D는 delete(삭제)를 의미한다.
+
+mongoose에게, 우리 애플리케이션의 데이터들이 어떻게 생겼는지 알려줘야한다.
+
+따라서 그것을 models/Video.js를 통해서 할 것이다. 데이터의 관점에서, Video가 어떻게 생겼는지 알려주는 파일이다.
+
+Video Model을 만들기 위해선 mongoose를 import해줘야한다.
+
+model을 생성하기 전에 model의 형태를 정의해 줄 필요가 있다.
+
+schema라고 알려져 있다.
+
+다음과 같이 데이터를 넣는것이 아닌, 형식만 넣어주면 된다.
+
+models/Video.js
+
+import mongoose from "mongoose";
+
+const videoSchema = new mongoose.Schema({
+  title: String,
+  description: String,
+  createdAt: Date,
+  hashtags: [{ type: String }],
+  meta: {
+    views: Number,
+    rating: Number,
+  },
+});
+
+const Video = mongoose.model("Video", videoSchema);
+export default Video;
+
+
+Array형식을 지정할 때 type도 위와같이 지정해 줄 수 있다.
+
+다음과 같은 방식으로 해도 동일하다.
+
+title: {type: String},
+
+model만드는 것은 다음과 같이 하면 된다.
+
+const Video = mongoose.model("Video", videoSchema);
+
+그 후에 export해주고 서버에서 import를 해주면 된다.
+
+cf) server.js에 import를 하다보니깐 앞으로도 더 많은 내용이 추가될 것 같고 이것은 서버와 관련있는 코드가 아니다. 그래서 분리해서 관리하기 위해 init.js를 만든다.
+
+server의 경우 express된 것들과 server의 configuration에 관련된 코드만 처리하기 위해 만들어 졌다.
+
+database나 models같은 것들을 import하기 위함이 아니다. 그래서 init.js 와 server.js로 구분한다.
+
+init.js
+
+import "./db";
+import "./models/Video";
+import app from "./server";
+
+const PORT = 4000;
+
+const handleListening = () =>
+  console.log(`✅ Server listenting on port http://localhost:${PORT} 🚀`);
+
+app.listen(PORT, handleListening);
+
+
+
+server.js
+
+import express from "express";
+import morgan from "morgan";
+import globalRouter from "./routers/globalRouter";
+import userRouter from "./routers/userRouter";
+import videoRouter from "./routers/videoRouter";
+
+const app = express();
+const logger = morgan("dev");
+
+app.set("view engine", "pug");
+app.set("views", process.cwd() + "/src/views");
+
+app.use(logger);
+app.use(express.urlencoded({ extended: true }));
+app.use("/", globalRouter);
+app.use("/users", userRouter);
+app.use("/videos", videoRouter);
+
+export default app;
+
+database내 video에 대한 접근은 어려울까?
+
+video Model다루는것은 controller에서 하면된다.
+
+먼저 파일에서 import를 해준다.
+
+그리고 database와 연결해줘야한다. ( Document를 참고하자 | query )
+Vidoe.find()
+두가지 활용 방법이 있는데 하나는 callback function을 사용하거나, promise를 활용하는 방법이다.
+
+callback이 무엇이냐
+
+callback이란 무언가가 발생하고 난 다음 호출되는 function을 말한다.
+
+즉 실행이 되는것을 기다려야만 한다는 것이다.
+
+Video같은 경우에도 javaScript내에서 데이터를 처리하는 것이 아닌 외부에서 데이터를 꺼내오는 것이기 때문에 데이터가 완전히 전송될 때 까지 기다려야한다. 그 과정에서 오류가 날 수도 있는 것이다.
+
+다시 돌아가서 Video.find()에서 필요한 인자는 configuration이랑 호출할 function이 필요하다.
+
+Video.find({}, (error, document) => {};);
+
+여기서 중괄호는 search terms를 나타내는데, search terms가 비어있으면 모든 형식을 찾는다는 것을 뜻한다.
+즉, 모든 형태의 비디오를 찾는 것이다. (본래는 저자리에 condition?이 들어가야 한다.)
+
+mongoose는 이 부분을 database에서 불러올 것이다.
+
+Video.find({},
+
+database가 반응을 한다면, mongoose는 (error, document) => {};)이 function을 실행할 것이다.
+
+그 다음 mongoose는 err와 document의 값을 불러올것이다.
+
+여기서 눈여겨 볼 것이 있다. 다음과 같이 코드가 짜져있다고 하자.
+
+export const home = (req, res) => {
+	Video.find({}, (error, videos) => {
+		console.log("error", error);
+		console.log("video", videos);
+	});
+	console.log("hello");
+	return res.render("home", { pageTitle: "Home", videos: [] });
+}
+
+출력순서를 보면 error -> videos -> "hello" 일 것 같지만 결과는 다음과 같았다.
+
+스크린샷, 2022-01-17 17-18-05.png
+
+우리의 logger는 request가 완성되면 출력이 돼야 한다.
+
+"hello"가 나온 시점에서 연결이 된것이고, template을 render한 다음 errors와 videos가 출력이 된것이다.	
+
+꼭 기억해야 될 부분은 유저가 page를 request하고 "hello"를 출력한 뒤 render 과정을 거쳐야 logger를 얻게 되는 것이다. 
+
+유저가 요청해서 받은 response를 보면 저 말은 우리가 response를 요청해서 받은 다음 다시 전송했다는 말이다.
+
+render와 respond 과정 이후에 console.log(error)이든가 출력되는것.
+
+좀 더 직관적으로 보이기 위해 다음과 같이 코드를 수정후 실행해보자.
+
+export const home = (req, res) => {
+  console.log("Starting Search");
+  Video.find({}, (error, videos) => {
+    console.log("error", error);
+    console.log("video", videos);
+    console.log("Finished Search");
+  });
+  console.log("I should be the last one");
+  return res.render("home", { pageTitle: "Home", videos: [] });
+};
+
+스크린샷, 2022-01-17 17-27-00.png
+
+이 부분을 응용해 볼 수 있다.
+
+다음과 같이 코드를 수정한다.
+
+export const home = (req, res) => {
+  console.log("Start");
+  Video.find({}, (error, videos) => {
+    console.log("Finished");
+    return res.render("home", { pageTitle: "Home", videos });
+  });
+  console.log("I finish first");
+};
+이제 datbase검색이 끝나야 rendering이 시작된다.
+
+스크린샷, 2022-01-17 17-32-11.png
+
+database의 검색이 끝나기 전에 rendering이 되는것을 방지했다.
+
+하지만 function안에 function을 넣어야 되는거 것이 번거롭다.
+
+또한 코드를 자세히 살펴보자면, 저것은 결국에 home function에선 return이 없는 것이다.
+
+return 자체는 해당 function을 종료시켜주는데, 그것이 function안에 function에 있다면 안에있는 function이종료가 되는 것이다.
+
+그래서 사용할 수 있는것이 promise이다.
+
+promise는 callback의 최신버전이라고 생각하면 된다.
+
+export const home = async (req, res) => {
+  try {
+    console.log("I start");
+    const videos = await Video.find({});
+    console.log("I finish");
+    console.log(videos);
+    return res.render("home", { pageTitle: "Home", videos });
+  } catch(error) {
+    return res.render("server-error", {error});
+  }
+};
+
+스크린샷, 2022-01-17 17-36-55.png
+
+await를 find앞에 적으면 find는 네가 callback을 필요로 하지 않다는 걸 알게 되는거다.
+
+여기서 error 인자가 사라진 것을 해결하기 위해 try catch문을 사용한다.
+
+await의 대단한 점은 database를 기다려주기 때문이다. 
+
+async와 await의 최대 장점은 직관적이라는 것이다.
+
+javascript가 어디서 어떻게 기다리는지 바로 알 수 있기 때문이다.
+
+어딜 가지 않고 await가 있는 부분에서 계속 다 가져올 때 까지 기다려준다.
+
+코딩 규칙상 await는 function안에서만 사용이 가능한데,
+해당 function이 asynchronous일 때만 가능하다.
+
+User가 비디오를 업로드할 때 Schema의 데이터를 보내줄 수 있다는 말이다.
+
+![postUpload결과](./screenshot/postUpload결과.png)
+
+
+업로드 페이지를 Schema 구성요소에 맞게 수정해줘야한다.
+
+upload.pug
+
+extends base.pug
+
+block content 
+    form(method="POST") 
+        input(type="text", placehloder="Title", name="title", required)
+        input(type="text", placehloder="Description", name="description", required)
+        input(type="text", placehloder="Hashtags, separated by comma.", name="hashtags",required)
+        input(type="submit", value="Upload Video")
+        
+비디오를 만드는 과정은 다음과 같다.
+
+우리는 document를 만들어줘야한다.
+
+document는 데이터를 가진 비디오라고 생각하면 된다. 그리고 document를 database에 저장해야 한다.
+
+video object를 만드는 것은 다음과 같이 된다.
+
+videoController.js
+
+export const postUpload = (req, res) => {
+  const { title, description, hashtags } = req.body;
+  const video = new Video({
+    title,
+    description,
+    hashtags: hashtags.split(",").map((word) => `#${word}`),
+    createdAt: Date.now(),
+    meta: {
+      views: 0,
+      rating: 0,
+    },
+  });
+  console.log(video);
+  return res.redirect("/");
+};
+
+
+hashtags를 보면 ,로 구분하여 string => Array로 바꿔준 후 map()함수를 통해서 #word 형태로 만들어 준다.
+
+결과는 다음과 같다.
+
+스크린샷, 2022-01-17 19-35-58.png
+
+mongoose가 id를 부여해준다.
+
+object는 document처럼 ID가 있어야하기 때문이다. 아직 DB에는 추가가 되지는 않는다.
+
+Schema에서 설정해둔 것은 meta안에 views와 rating은 Number이여야 한다. 만약 String형태로 데이터를 보내면 어떻게 될것인가?
+
+meta가 생성되지 않는다.
+
+즉, Mongoose가 데이터 타입의 유효성 검사를 도와주고 있는 것이다.
+
+video가 mongoose model인 덕에 다음과 같이 할 수 있다.
+
+video.save();
+
+save는 promise를 return해주는데 save작업이 끝날 때까지 기다려줘야한다는 것이다.
+
+그래서 await와 async를 써줘야 한다.
+
+video.save()를 보면 저장된 document를 return 해주기 때문에 다음과 같이도 할 수 있다.
+
+const dbVideo = await video.save()
+console.log(dbVideo);
+
+최종적으로 코드는 다음과 같이 된다.
+
+controller.js
+
+export const postUpload = async (req, res) => {
+  const { title, description, hashtags } = req.body;
+  const video = new Video({
+    title,
+    description,
+    hashtags: hashtags.split(",").map((word) => `#${word}`),
+    createdAt: Date.now(),
+    meta: {
+      views: 0,
+      rating: 0,
+    },
+  });
+  await video.save();
+  return res.redirect("/");
+};
+
+
+이렇게 하고 upload page가서 하나를 추가하면 home화면에 뜨는 것을 확인 할 수 있다.
+
+스크린샷, 2022-01-17 19-49-45.png
+
+terminal로 가서 mongo 로 가서 show dbs를 보면 새로운 database가 생성된 것을 확인할 수 있다.
+
+use tatabaseName 
+
+-> show collections
+
+collections은 documnet의 묶음이라고 생각하면 된다.
+
+다음과 같이 video를 만들어도 된다.
+
+controller.js
+
+export const postUpload = async (req, res) => {
+  const { title, description, hashtags } = req.body;
+  try { await Video.create({
+    title,
+    description,
+    hashtags: hashtags.split(",").map((word) => `#${word}`),
+    createdAt: Date.now(),
+    meta: {
+      views: 0,
+      rating: 0,
+    },
+  }); catch {
+  }
+  return res.redirect("/");
+};
+
+try - catch는 써도 되고 안써도 된다.
+
+여기서 만약 데이터를 하나 비워놓고 사용하면 에러가 날까?
+예를 들어 createdAt 을 지워놓고 데이터를 생성해서 db에 넣어주면 에러가 나타날까?
+
+답은 NO다.
+
+그 이유는 Schema에서 required를 안해줬기 때문이다.
+
+models/Video
+
+import mongoose from "mongoose";
+
+const videoSchema = new mongoose.Schema({
+  title: String,
+  description: String,
+  createdAt: {type:Date, required: true},
+  hashtags: [{ type: String }],
+  meta: {
+    views: Number,
+    rating: Number,
+  },
+});
+
+const Video = mongoose.model("Video", videoSchema);
+export default Video;
+
+
+이런식으로 말이다.
+
+이렇게 하고 createdAt을 지워놓고 데이터를 전송하면 무한 로딩이 걸릴 것이다.
+
+why? response를 못하기 때문이다.
+
+javascript Error로 인해서 await Video.create() 이부분에서 멈춰서이다.
+
+그래서 다음과 같이 코드를 정리할 수 있다.
+
+export const postUpload = async (req, res) => {
+  const { title, description, hashtags } = req.body;
+  try {
+    await Video.create({
+      title,
+      description,
+      hashtags: hashtags.split(",").map((word) => `#${word}`),
+      meta: {
+        views: 0,
+        rating: 0,
+      },
+    });
+    return res.redirect("/");
+  } catch (error) {
+    return res.render("upload", {
+      pageTitle: "Upload Video",
+      errorMessage: error._message,
+    });
+  }
+};
+
+이렇게 하고 upload.pug를 다음과 같이 수정한다.
+
+uplooad.pug
+
+extends base.pug
+
+block content
+    if errorMessage 
+        span=errorMessage
+    form(method="POST")
+        input(placeholder="Title", required, type="text", name="title")
+        input(placeholder="Description", required, type="text", name="description")
+        input(placeholder="Hashtags, separated by comma.", required, type="text", name="hashtags")
+        input(type="submit", value="Upload Video")
+
+하지만 여기서 잘 생각해보면, video를 만들때 마다 Date.now()를 해서 만들기 번거로우니 Schema에서 처리할 수 있으면 좋겟다.
+
+그래서 default를 매긴다.
+
+  createdAt: { type: Date, required: true, default: Date.now },
+
+
+최종적으로 Schema의 형태를 보면 다음과 같다.
+
+models/Video
+
+import mongoose from "mongoose";
+
+const videoSchema = new mongoose.Schema({
+  title: { type: String, required: true, trim: true, maxlength: 80 },
+  description: { type: String, required: true, trim: true, minlength: 20 },
+  createdAt: { type: Date, required: true, default: Date.now },
+  hashtags: [{ type: String, trim: true }],
+  meta: {
+    views: { type: Number, default: 0, required: true },
+    rating: { type: Number, default: 0, required: true },
+  },
+});
+
+const Video = mongoose.model("Video", videoSchema);
+export default Video;
+
+home.pug
+
+mixin video(video)
+    div
+        h4
+            a(href=`/videos/${video.id}`)=video.title
+        p=video.description
+        small=video.createdAt
+        hr
+        
+upload.pug
+
+extends base.pug
+
+block content
+    if errorMessage
+        span=errorMessage
+    form(method="POST")
+        input(placeholder="Title", required, type="text", name="title", maxlength=80)
+        input(placeholder="Description", required, type="text", name="description", minlength=20)
+        input(placeholder="Hashtags, separated by comma.", required, type="text", name="hashtags")
+        input(type="submit", value="Upload Video")
+        
+여기서 문제가 발생했다.
+
+
+
+
+현재 router를 살펴보면 다음과 같이 되어있다.
+
+지어서 **Regular Expression(정규 표현식)**을 사용했다. 하지만, MongoDB에서 제공해주는 **id는 16진수**로 되어있는 상황이다. 수정이 필요할 것 같다.
+
+
+
+
+
+
+video Detail보여주는 page는 :id변수를 사용해서 url뒤에 붙여줌으로써 보여지도록 해놓았다.
+
+그런데, mongoose에서 만들어주는 고유 ID는 숫자 문자가 같이 섞여있는 형태이다.
+
+일반 정규 표현식은 사용하기 어렵겠다.
+
+documentation에서 mongoDB id에 대해 조사해서 이걸로 regular expression을 만들어 볼거다.
+
+id는 24byte hexadecimal string(24바이트 16진수)라고 정의되어 있다.
+
+https://www.regexpal.com/ 여기서 check해서 만들어보면된다. 다음과 같이 만들수 있다.
+
+[0-9a-f]{24}
+
+추가하고 나면 watch.pug 내용을 수정하라고 오류가 난다.
+
+Cannot read properties of undefined (reading 'views')
+
+이런 오류가 나오는데 이 말은 정의되지 않은 무엇 안에서 views 를 못찾고 있음을 의미한다.
+
+스크린샷, 2022-01-17 20-37-38.png
+
+현재 controller에서 id만 받고 video를 안넘겨 줘서 그렇다.
+
+findOne()과 findById()를 이용할 것이다.
+
+findOne은 보내는 모든 condition을 적용시켜준다.
+
+findById는 id로 영상을 찾아낼 수 있는 기능을 지원해준다.
+
+controller를 다음과 같이 수정해준다.
+
+videoController.js
+
+export const watch = async (req, res) => {
+  const { id } = req.params;
+  const video = await Video.findById(id);
+  return res.render("watch", { pageTitle: video.title, video });
+
+한 가지 처리해야 될것이 누군가가 존재하지 않는 video페이지를 방문했을 때 어떻게 해야하느냐이다.
+
+url에서 id를 살짝 바꿔서 page이동을 시도하면 무한로딩이 걸린다.
+
+그 이유는 findById를 통해서 가져오는 video가 null값으로 되어 있기 때문이다.
+
+즉, 비디오 검색에 실패해서 null값을 가져왔고 video.title을 요청했지만 그 video가 존재하지 않아서 null이 되는 error
+
+그래서 condition을 사용하고 새로운 Page 404.pug를 만든다.
+
+
+export const watch = async (req, res) => {
+  const { id } = req.params;
+  const video = await Video.findById(id);
+  if (!video) {
+    return res.render("404", { pageTitle: "Video not found." });
+  }
+  return res.render("watch", { pageTitle: video.title, video });
+};
+
+!video를 video === null로 써도 동일하게 체크된다.
+
+에러났을 때 부분을 if문 안에 넣어줌으로써 나중에 코드를 추가하더라도 밑에 붙여서 이어 나가기 쉬울 것이다.
+
+다음은 edit Page를 손봐줄 차례인데, 기본적인으로 id를 통해 video를 가져와야 되는것은 동일하다.
+
+edit.pug를 살펴보자.
+
+extends base.pug
+
+block content 
+    h4 Change Title of video 
+    form(method="POST") 
+        input(name= "title", placehloder="Vidoe Title", type="text", value=video.title, required)
+        input(placeholder="Description", required, type="text", value=video.description name="description", minlength=20)
+        input(placeholder="Hashtags, separated by comma.", required, type="text", value=video.hashtags,name="hashtags")
+        input(value="Save", type="submit")
+
+이것의 결과 화면을 보면 다음과 같다.
+
+스크린샷, 2022-01-17 21-10-28.png
+
+hashtags가 저렇게 나와버린것이 문제다. 그래서 지금부터 hashtags를 format해줘야한다.
+
+Array -> String으로 하려면 어떻게 하면될까? join()을 사용하면 된다. video.hashtags.join()
+
+이제 update를 하려고 form을 전송하면 POST로 해서 전송이 될것이고, controller에서 처리하면 될것이다.
+
+먼저 첫번째 방식으로 일일히 다 처리하는 것이다. 
+
+export const postEdit = async (req, res) => {
+  const { id } = req.params;
+  const { title, description, hashtags } = req.body;
+  const video = await Video.findById(id);
+  if (!video) {
+    return res.render("404", { pageTitle: "Video not found." });
+  }
+  video.title = title;
+  video.description = description;
+  video.hashtags = hashtags.split(",").map((word) => `#${word}`);
+  await video.save();
+  return res.render("edit", { pageTitle: `Edit: ${video.title}`, video });
+};
+
+하지만 여기서 이상태로 하면 오류가 날것이다. hashtags에 이미 #이 다 달려있기 때문이다.
+#이 없을 때만 해시태그를 추가하고 싶다면 다음과 같이 하면된다.
+
+  video.hashtags = hashtags.split(",").map((word) => (word.startsWith("#") ? word : `#${word}`));
+
+이것을 하고나니 postUpload부분도 수정을 해야 할 것 같다. 복사-붙여넣기.
+
+매우 안좋다. 이런 방식은 좋지 않다.
+
+이 과정은 굉장히 번거롭다. 코드의 길이 즉, form이 많아지거나 하면 매우 다루기 까다롭다.
+
+findByIdAndUpdate()라는 function에 대해 알아보자.
+
+https://mongoosejs.com/docs/guide.html
+
+이 function은 다음과 같이 쓰면된다.
+
+첫번째 Arg로 id 두번째 Arg로 변경할 내용을 넣어주면 된다.
+
+export const postEdit = async (req, res) => {
+  const { id } = req.params;
+  const { title, description, hashtags } = req.body;
+  const video = await Video.findById(id);
+  if (!video) {
+    return res.render("404", { pageTitle: "Video not found." });
+  }
+  await Video.findByIdAndUpdate(id, {
+    title,
+    description,
+    hashtags: hashtags
+      .split(",")
+      .map((word) => (word.startsWith("#") ? word : `#${word}`)),
+  });
+  return res.redirect(`/videos/${id}`);
+};
+
+
+참고로 대문자 V의 Video는 Model이고, Model이기 때문에, 여러 function 을 사용할 수 있는것이다.
+
+위에 코드를 보면 video 전체를 다 가져올 필요가 없어졌다. 그냥 단지 video가 있는지만 알면 된다.
+
+exists()를 활용한다.
+
+exists()는 ID를 받지 않고, filter를 받는다. 
+
+아무런 조건이나 사용 가능하다는 것이다.
+
+  const video = await Video.exists({ _id: id });
+
+
+현재 우리는 영상 업데이트나 영상 생성을 위해 저장하기 전에 해시태그들을 처리하고 있다.
+
+hashtags
+      .split(",")
+      .map((word) => (word.startsWith("#") ? word : `#${word}`)), 
+      이 부분은 Model에 저장하기 전에 처리하는 것들인데 
+영상을 저장하기 전에 여러가지를 할 수 있고, 해야만 한다.
+예를 들어, 이메일 체크 .. 
+
+Mongoose에선 영성을 저장, 혹은 업데이트 전에 이거저거 하라고 시킬수 있다.
+
+그걸 Middleware라고 한다. Express 에서 본 Middleware랑 똑같이 Mongoose에도 middleware가 있고, pre, post, hook도 있다.
+
+중요한 것은 틈을 만들어 주는것이고 그것은 바로 다음과 같이 해서 좋은것이다.
+
+영상을 저장하거나 업데이트 할 때 그 프로세스를 잠시 중단하고, 해시태그를 처리해서 더 깔끔하게 정리를 하고, 하던걸 마저 하는 것이다.
+
+만약 Update할때마다 아래와 같은 오류가 발생한다면,
+스크린샷, 2022-01-18 14-14-45.png
+
+확인해보면, useFindAndModify option set to false라고 적혀있다.
+
+그래서 useFindAndModify를 DB에 추가해주면 해결된다.
+
+Express의 middleware같이 흐름을 방해하지 않는다.
+
+mongo안에서 먼저 database에 있는 collections를 삭제하고 시작하자.
+
+터미널로가서 mongo를 쳐서 mongo안으로 들어간다.
+
+이후 show dbs를 쳐서 use databaseName으로해서 들어간다.
+
+이후 db.help()를 보면 drop이 있다.
+
+삭제해주면된다 명령어에 맞게..
+
+Middleware모양은 어떻게 생겼는가 하면 다음과 같다.
+
+shema.pre( 'save' , async function() {} );
+
+'save'위치엔 Types of Middleware이 들어가면 된다. remove, save, updateOne, deleteOne ...
+
+이제 models/Video로 가서 만들면 된다. 
+
+여기서 중요한 것은 Middleware는 무조건 model이 생성되기 전에 만들어야 한다는 것이다.
+
+키워드 this가 있는데 this는 우리가 저장하고자 하는 문서를 가르킨다.
+
+다음과 같이 코드를하고 실행하면 결과는 다음과 같다.
+
+import mongoose from "mongoose";
+
+const videoSchema = new mongoose.Schema({
+  title: { type: String, required: true, trim: true, maxLength: 80 },
+  description: { type: String, required: true, trim: true, minLength: 20 },
+  createdAt: { type: Date, required: true, default: Date.now },
+  hashtags: [{ type: String, trim: true }],
+  meta: {
+    views: { type: Number, default: 0, required: true },
+    rating: { type: Number, default: 0, required: true },
+  },
+});
+
+videoSchema.pre("save", async function () {
+  console.log("We are about to save:", this);
+});
+
+const Video = mongoose.model("Video", videoSchema);
+export default Video;
+
+스크린샷, 2022-01-18 14-30-10.png
+
+그렇다면 this를 통해서 바꿀 수 있다.
+
+videoSchema.pre("save", async function () {
+  console.log("We are about to save:", this);
+  this.title = "Change Title !!!!!!!!HAHAHAH!!"
+});
+
+이와 같이 무슨 title을 입력하든 간에 다음과 같이 되는것을 확인 할 수 있다.
+
+스크린샷, 2022-01-18 14-33-25.png
+
+이것을 이용해서 hashtags를 videoController에서 처리하는것이 아닌, Middleware로 처리할 수 있다.
+
+현재 Schema에서 hashtags를 Array String type으로 지정해놨기 때문에 String으로 저장을 하려해도 Array로 저장된다. 하지만 요소가 하나인 것으로 저장된다. 분리가 되어있지 않은 상태이다.
+
+Video.js
+
+import mongoose from "mongoose";
+
+const videoSchema = new mongoose.Schema({
+  title: { type: String, required: true, trim: true, maxLength: 80 },
+  description: { type: String, required: true, trim: true, minLength: 20 },
+  createdAt: { type: Date, required: true, default: Date.now },
+  hashtags: [{ type: String, trim: true }],
+  meta: {
+    views: { type: Number, default: 0, required: true },
+    rating: { type: Number, default: 0, required: true },
+  },
+});
+
+videoSchema.pre("save", async function () {
+  this.hashtags = this.hashtags[0]
+    .split(",")
+    .map((word) => (word.startsWith("#") ? word : `#${word}`));
+});
+
+const Video = mongoose.model("Video", videoSchema);
+
+export default Video;
+
+이와 같이해서 0번째 element를 꺼내서 나눠줘서 처리해줌으로써 각각 Array안의 Element로 들어간다.
+
+['for, real, now, mongo']	=> ['for', 'real', 'now', 'mongo']
+
+
+db.videos.remove({})로 삭제
+db.videos.find()
+
+findByIdAndUpdate를 위한 pre middleware는 없다.
+
+findByIdAndUpdate는 findOneAndUpdate를 호출한다.
+
+findOneAndUpdate를 위한 middleware는 있다.
+
+다만 문제는, findOneAndUpdate는 save hook를 호출하지 않는다.
+
+그리고 findOneAndUpdate에서는 업데이트 하려는 문서에 접근을 할 수가 없다.
+
+save와 update둘다 필요한데 위의 방식으로는 한계가 있다. 다른방식으로 해야한다.
+
+함수를 만들어 주면된다. 다음과 같이 해보자.
+
+models/Video
+
+import mongoose from "mongoose";
+
+export const formatHashtags = (hashtags) => {
+  hashtags.split(",").map((word) => (word.startsWith("#") ? word : `#${word}`));
+};
+
+...
+
+
+Controller
+
+export const postEdit = async (req, res) => {
+  const { id } = req.params;
+  const { title, description, hashtags } = req.body;
+  const video = await Video.exists({ _id: id });
+  if (!video) {
+    return res.render("404", { pageTitle: "Video not found." });
+  }
+  await Video.findByIdAndUpdate(id, {
+    title,
+    description,
+    hashtags: formatHashtags(hashtags),
+  });
+  return res.redirect(`/videos/${id}`);
+};
+
+이러한 방식으로 처리하면 된다.
+
+Static을 배워보자.
+
+현재 우리는 Video.findById()를 굉장히 자주 사용하고 있다.
+
+Video.create()도 사용하고 있다.
+
+Schema.static( '만들고자 하는 static이름', function() )
+
+videoSchema.static("formatHashtags", function (hashtags) {
+  return hashtags
+    .split(",")
+    .map((word) => (word.startsWith("#") ? word : `#${word}`));
+});
+
+
+controller
+
+      hashtags: Video.formatHashtags(hashtags),
+      
+이제 Mixin가서 hashtag를 볼수 있게 해놓자.
+
+mixins/video.pug
+
+이제 delete를 만들건데 이것은 템플릿, 컨트롤러, 라우터 전부 사용하게 될 것이다.
+
+1. watch로 가서 delete page로 갈 수 있는 link만들어 주기
+
+2. post로 하지 않고 URL을 방문하여서 삭제하게끔 만든다.
+=> function의 라우터와 컨트롤러를 만들어야 한다.
+
+3. controller에 function구현해주고 redirect로 home("/")으로 보내주면 된다.
+=> 
+export const deleteVideo = async (req, res) => {
+  const { id } = req.params;
+  await Video.findByIdAndDelete(id);
+  return res.redirect("/");
+};
+
+findOneAndDelete는 findOneAndRemove랑 조금 다르다.
+
+간단히 말하면, findOneAndDelete를 써야한다.
+
+findOneAndDelete({ _id:id})를 줄인것이 findByIdAndDelete(id)이다.
+
+여러가지 할 수 있는것을 봤다. 정렬도 가능하다. 다음과 같이 해보자.
+
+export const home = async (req, res) => {
+  const videos = await Video.find({}).sort({ createdAt: "desc" });
+  return res.render("home", { pageTitle: "Home", videos });
+};
+
+desc는 내림차순으로 descending의 줄임말이고, asc는 ascending의 약자로 오름차순이다.
+
+저장할때 hashtag가 하나만 저장되고 edit를 하면 올바르게 저장되서 머가 문제인가 봤더니 다음이 문제였다.
+
+videoSchema.static("formatHashtags", function (hashtags) {
+  return hashtags
+    .split(",")
+    .map((word) => (word.startsWith("#") ? word : `#${word}`));
+});
+
+videoSchema.pre("save", async function () {
+  this.hashtags = this.hashtags[0]
+    .split(",")
+    .map((word) => (word.startsWith("#") ? word : `#${word}`));
+});
+
+models/Video에서 이렇게 되어 있었는데 저장과정에서 split에서 hashtag를 각 element로 나눠서 Array에 넣었는데 또 한번 더해서 문제가 발생했다.
+
+Search 페이지를 만들건데 어느 router에 해야할까?
+
+globalRouter에서 해야한다.
+
+view에 만들고 homepage에서 link를 만들어 이동할 수 있게 해놓는다. 그리고 search.pug를 만든다.
+
+search.pug
+
+extends base.pug
+
+block content 
+  form(method="GET") 
+    input(type="text", name="keyword", placeholder="Serach by title...")
+    input(type="submit", value="Search now")
+    
+다음과 같이 했으면 controller.js가서 keyword를 req.query 를통해서 받아온다.
+
+export const search = (req, res) => {
+  const { keyword } = req.query;
+  return res.render("search", { pageTitle: "Search" });
+}; 
+
+여기서 주의해야 될것은, keyword가 항상 있는것이 아니다. 예를 들어 home page에서 search로 이동하면 keyword로 가져오는 값은 undefined이다.
+
+당연히 Search는 database와 소통하기 위해서 Mongoose, MongoDB와 소통하기 위해서 우리가 사용해야 할 것은 async랑 await이다.
+
+export const search = (req, res) => {
+  const { keyword } = req.query;
+  if (keyword) {
+    const videos = await Video.find({
+      title: keyword,
+    });
+    return res.render("search", {pageTitle:"Search", videos})
+  }
+  return res.render("search", { pageTitle: "Search" });
+};
+
+
+이런식으로 해주면 되겠다.
+
+위에꺼의 문제점은 search.pug를 보면 mixin를 사용해서 videos를 받고 있긴한데 지금 위에처럼하면 처음 Search Page로 이동했을 때 변수 선언조차 되어 있지 않은 상황이다. each video in videos에서 문제가 생기는 거임.
+
+또는 이런식으로 말이다.
+
+export const search = async (req, res) => {
+  const { keyword } = req.query;
+  let videos = [];
+  if (keyword) {
+    videos = await Video.find({
+      title: {
+        $regex: new RegExp(`${keyword}`, "i"),
+      },
+    });
+  }
+  return res.render("search", { pageTitle: "Search", videos });
+};
+
+
+
+다음은 살펴보자.
+export const search = (req, res) => {
+  const { keyword } = req.query;
+  if (keyword) {
+    const videos = await Video.find({
+      title: keyword,
+    });
+  }
+    return res.render("search", {pageTitle:"Search", videos})
+};
+여기서 머가 문제인지를 알아야 한다.
+
+현재 videos는 현재   if (keyword) {
+    const videos = await Video.find({
+      title: keyword,
+    });
+  }이 안에서 정의가 됐다. 그래서 밖에 와는 공유되어 있지 않은 상태이다. 
+  
+즉, const는 이 if문 안에서만 존재하는 것이다.
+  
+search.pug를 다음과 같이 수정하면 된다.
+
+extends base.pug
+include mixins/video
+
+block content 
+  form(method="GET") 
+    input(type="text", name="keyword", placeholder="Serach by title...")
+    input(type="submit", value="Search now")
+    
+  div 
+    each video in videos 
+      +video(video)
+      
+      
+이 방식의 문제점은 제목을 완전히 정확하게 써야한다는 점이다.
+
+그래서 regular expression을 사용할 수 있겠다.
+
+찾고 싶은 단어로 끝나는 제목을 검색하고 싶다면?
+word$
+
+반대로 시작하는 제목을 검색하고 싶다면?
+^word
+
+
+이걸 하기 위해선 regex라는 연산자(operator)를 써아햔다. regular expression의 약자다.
+
+
+i의 경우 대문자 소문자 구분 없게 해준다.
+
+이렇게 regular expression안에 keyword를 집어 넣으면 contain 방식의 regular expression을 생성하게 된다.
+
+그 말은, 제목에 keyword를 포함하는 영상들을 찾을 것이다라는 말이다.
+
+이게 contains이다.
+
+const videos = await Video.find({
+  title: {
+    $regex: new RegExp(`${keyword}`, "i"),
+  },
+});
+    
+    
+아니면 keyword로 시작하는 제목만 하려면?
+
+
+const videos = await Video.find({
+  title: {
+    $regex: new RegExp(`^${keyword}`, "i"),
+  },
+});
+
+이것으로 CRUD Create, Read, Update, Delete가 완성됐다.
+
+export const home = (req, res) => {
+  const movies = Movie.find({});
+  console.log(movies);
+  return res.render("home", { pageTitle: "Home", movies });
+};
+
+여기서 이렇게 하면 다음과 같이 출력되면서 오류가 나고 database에 추가한것을 재대로 못불러온다.
+
+스크린샷, 2022-01-18 22-52-38.png
+
+다음과 같이 해야한다
+
+export const home = async (req, res) => {
+  const movies = await Movie.find({});
+  console.log(movies);
+  return res.render("home", { pageTitle: "Home", movies });
+};
+
+스크린샷, 2022-01-18 22-53-19.png
+
+그리고 _id처럼 되어있지만 변수를 사용하여 id를 불러올때 movie.id로 해도 불러와진다.
+
+vscode로는 되는데 blueprint로 옮기고 나니 이런 오류가 발생한다.
+
+스크린샷, 2022-01-18 23-45-44.png
+
+이렇게하면 오류가 안난다.
+
+export const postEdit = async (req, res) => {
+  const { id } = req.params;
+  const { title, summary, year, genres } = req.body;
+  const movie = await Movie.findById(id);
+  if (!movie) {
+    return res.render("/", { pageTitle: "Video not found." });
+  }
+  await Movie.findByIdAndUpdate(id, {
+    title,
+    summary,
+    year,
+    genres: Movie.formatGenres(genres)
+  });
+  return res.redirect("/");
+};
+
+이렇게 하면 오류가 난다.
+
+export const postEdit = async (req, res) => {
+  const { id } = req.params;
+  const { title, summary, year, genres } = req.body;
+  const movie = await Movie.findById(id);
+  if (!movie) {
+    return res.render("/", { pageTitle: "Video not found." });
+  }
+    await Movie.findByIdAndUpdate(id, {
+      title,
+      summary,
+      year,
+      genres: Movie.formatGenres(genres)
+    });
+    return res.redirect(`/movies/${movie.id}`);
+};
+
+갑자기 된다  하 ..............................................
+
+

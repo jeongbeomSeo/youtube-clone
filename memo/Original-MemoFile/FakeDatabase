@@ -1,0 +1,410 @@
+Back end에 데이터를 어떻게 보내는지?
+
+먼저, data를 어떻게 back end에 post하는지 배울 것이다.
+
+3가지를 해볼건데 다음과 같다.
+
+1. 가짜 database에 있는 모든 비디오들을 나열할 것이다.	
+
+2. 유저가 하나의 비디오를 볼 수 있으면 좋겠다.
+
+3. 영상을 업로드하고, 그 영상을 수정하는 것
+
+먼저 가짜 database를 controller에다가 만들어 놓는다.
+
+videoController.js
+
+let videos = [
+  {
+    title: "First Video",
+    rating: 5,
+    comments: 2,
+    createdAt: "2 minutes ago",
+    views: 59,
+    id: 1,
+  },
+  {
+    title: "Second Video",
+    rating: 5,
+    comments: 2,
+    createdAt: "2 minutes ago",
+    views: 59,
+    id: 2,
+  },
+  {
+    title: "Third Video",
+    rating: 5,
+    comments: 2,
+    createdAt: "2 minutes ago",
+    views: 59,
+    id: 3,
+  },
+];
+
+
+...
+
+이렇게 함으로써 모든 함수들이 이 database를 사용할 수 있게 됐다.
+
+이후 mixin을 이용해서 home.pug에서 보여주면 된다.
+
+home.pug
+
+extends base.pug
+include ./mixins/video.pug
+
+block content
+    h2 Welcome here you will see the trending videos
+    ul
+        each item in videos
+            +video(item)
+        else
+            li Sorry nothing found.
+            
+video.pug
+
+mixin video(info)
+    div 
+        h4 
+            a(href=`/videos/${info.id}`)=video.title
+        ul 
+            li #{info.rating}/5.
+            li #{info.comments} comments.
+            li Posted #{info.createdAt}.
+            li #{info.views} views.
+            
+여기서 보면, anchor안에 url적는 부분에 #{}으로 변수를 사용한 것이 아닌 ${}로 사용한 것을 확인할 수 있다.
+
+이것은 string안에 #{}을 적으면 변수로 인식 못하기 때문이다.
+
+예를들어, "#{video.id}"라고 적거나 `#{video.id}` 라고 적으면 출력은 다음과 같이 나온다.
+
+	#{video.id}
+	
+따라서, 변수를 사용하려면 "/videos/" + video.id 또는 ``(backsticks)기호를 사용하고 ${}를 이용한다.
+
+다음과 같이 되어 있는데, 여기서 각각의 video로 이동해서 get으로 id를 받아오게 하려면 어떻게 하면 될까?
+
+controller에서 params를 이용하면 된다.
+
+https://studyingych.tistory.com/34
+
+videoController.js
+
+let videos = [
+  {
+    title: "First Video",
+    rating: 5,
+    comments: 2,
+    createdAt: "2 minutes ago",
+    views: 59,
+    id: 1,
+  },
+  {
+    title: "Second Video",
+    rating: 5,
+    comments: 2,
+    createdAt: "2 minutes ago",
+    views: 59,
+    id: 2,
+  },
+  {
+    title: "Third Video",
+    rating: 5,
+    comments: 2,
+    createdAt: "2 minutes ago",
+    views: 59,
+    id: 3,
+  },
+];
+
+export const trending = (req, res) => {
+  return res.render("home", { pageTitle: "Home", videos });
+};
+
+export const see = (req, res) => {
+	const { id } = req.params;
+	const video = videos[id - 1];
+	eturn res.render("watch", { pageTitle: `Watching ${video.title}` });
+};
+
+여기서 의문점이 든다.
+
+id를 받아온다면서 const { id } = req.params; 를 하면 req.params 전체를 받아오는거 아닌가?
+
+이건 ES6문법에 의해 작성된 것이다.
+
+저것은 다음과 똑같은 코드이다.
+
+const id = req.params.id; 
+
+이것과도 동일하다 
+
+const { params: {id}, } = req;
+
+ternary operator를 사용해서 다음과 같이 사용할 수도 있다.
+
+watch.pug
+
+extends base.pug
+
+block content 
+    h3 #{video.views} #{video.views === 1 ? "view" : "views"}
+
+
+이제 비디오 수정하는 페이지를 만들것이다.
+
+먼저 edit 페이지로 넘어가야되니깐 다음과 같이 해보자.
+
+extends base.pug
+
+block content 
+    h3 #{video.views} #{video.views === 1 ? "view" : "views"}
+    a(href="/edit") Edit Video &rarr;
+    
+여기서 &rarr; 오른쪽 화살표가 나온다.
+
+anchor에서 /edit으로 가면 어디로 가는 것일까?
+
+현재 /videos/1 인 url안에 들어와 있는 상황이다. link를 타고 이동하면 /edit으로 이동할 것이다.
+
+이것은 absolute url 이라고 보면된다.
+
+absolute url vs relative url
+
+href의 앞머리 부분에 /을 넣으면 현재 어디에 있든 상관없이 root경로 + /edit로 이동한다.
+
+이것이 바로 absolute url이 된다.
+
+/을 지우면 relative url이 된다. 현재 경로 + /edit로 이동한다.
+
+그럼 만약에 /edit -> ./edit로 수정하면 어떻게 작동을 할까?
+
+/videos/edit로 이동한다. /videos/1/edit로 이동하지 않는다.
+
+그래서 href=`${video.id}/edit` 로 써야한다.
+
+edit는 다음과 같이 수정한다.
+
+edit.pug
+
+extends base.pug
+
+block content 
+    h4 Change Title of video 
+    form(method="POST") 
+        input(name= "title", placehloder="Vidoe Title", type="text", value=pageTitle, required)
+        input(value="Save", type="submit")
+        
+
+너의 data를 어디로 보낼 것인가 그것이 action이다.
+
+method의 기본값은 GET이다.
+
+get request vs post request
+
+get을 사용해서 보내주면 url에 다음과 같이 나온다.
+
+[Screenshot](스크린샷, 2022-01-12 16-58-23.png)
+
+반면에 Post를 사용하면 다음과 같이 나온다.
+
+[Screenshot](스크린샷, 2022-01-12 16-59-12.png)
+
+보통 Post 방시은 파일을 보내거나, database에 있는 값을 바꾸는 것을 보낼 때 혹은 로그인 할 때  사용한다.
+
+Get방식의 경우 검색하거나 등등에서 사용한다.
+
+이제 서버를 만들어 볼 건데, 먼저 router에서 post를 받아줘야 한다.
+
+방식은 get과 동일하다.
+
+videoRouter.js 
+
+videoRouter.get("/:id(\\d+)/edit", getEdit);
+
+videoRouter.post("/:id(\\d+)/edit", postEdit);
+
+이런 방식으로 사용하면 된다.
+
+근데, 여기서 코드를 줄일 수 있는 방법이 있다. 바로 route()를 사용하는 것이다.
+
+videoRouter.route("/:id(\\d+)/edit").get(getEdit).post(postEdit);
+
+이와 같이하면 코드를 줄일 수 있다.
+
+postEdit은 다음과 같이 코드를 짜본다.
+
+export const postEdit = (req, res) => {
+  const { id } = req.params;
+  return res.redirect(`/videos/${id}`);
+};
+
+여기서 res.redirect()는 브라우저가 redirect 즉, 자동으로 이동하도록 하는 것이다.
+
+페이지 이동은 해결했다. 하지만, 데이터를 어떻게 백엔드 쪽에서 처리할지 해결하지 못했다.
+
+postEdit안에 console.log(req.body)를 넣어서 확인해보자.
+
+undefined라고 출력이 될것이다.
+
+현재 우리의 express application은 form을 어떻게 다루는지 모르는 것이다.
+
+express document를 가서 확인을 해보면 express.urlencoded()를 볼 수 있다.
+
+몇가지 옵션이 있는데 extended는 body에 있는 정보들을 보기 좋게 형식을 갖춰주는 일을 한다.
+
+즉, form의 데이터를 자바스크립트 object형식으로 보내준다.
+
+이것을 사용하기 위해 middlewares를 설정해 준다.
+
+app.use(express.urlencoded({ extended: true }));
+
+이것을 추가하고 다시 console.log(req.body)를 해주면 input text에서 적어줬던 내용을 받아온다.
+
+즉, form의 value를 받게 된 것이다.
+
+그 정보는 다음과 같이 받아 올 수 있다.
+
+export const postEdit = (req, res) => {
+  const { id } = req.params;
+  const { title } = req.body;
+  videos[id - 1].title = title;
+  return res.redirect(`/videos/${id}`);
+};
+form 에서 input[type="text"]의 name이 title이기 때문에 저렇게 한것이고, 그 내용을 가져온것이다.
+
+req.body는 form에 있는 value의 javascript representation이다.
+
+받아온 title을 database로 넣어서 수정을 해줘야 하는 부분까지 채워 넣었다.
+
+작업이 마무리가 되면 redirect로 해서 다시 watch 부분으로 돌아가준다.
+
+여기서 자주 실수날 수 있는 부분은 req.body의 데이터가 안 보일 때가 있다.
+
+그 경우 input에 name을 사용했는지 확인하자.
+
+input에 name을 사용하지 않은 경우 데이터를 볼 수 없다.
+
+현재까지 배운 내용을 정리하자면,
+
+유저가 form을 get 또는 post하면 그게 우리의 controller를 발동시켜서 유저들이 redirect되거나, 페이지에서 뭔가를 보게 된다.
+
+upload하는 것을 연습으로 가짜 database는 마무리를 한다.
+
+upload를 하려면 어떻게 해야될까?
+
+먼저, anchor을 이용해서 갈 수 있는 upload페이지를 만들기 위해 get으로 해서 페이지 이동을 할 수 있게 해주고, form을 생성해야 한다. 그리고 form을 사용해서 post로 보내주면 받은것을 하나로 묶어서 객체(dictionary)로 만들어 준 후 데이터 베이스에 추가하고 redirct를 하면 될 것이다.
+
+현재 나의 생각을 적어 놓은 것이다.
+
+강의를 보면서, 순서대로 비교해보며 정리해 보자.
+
+먼저 get에 관한걸 만들었다. 유저가 form을 보기 위해서
+
+export const getUpload = (req, res) => {
+	return res.render("upload");
+};
+
+export const postUpload = (req, res) => {
+	//	here we will add a video to the videos array.
+	return res.redirect("/");
+}
+
+post의 경우 나중에 사용할 것이니 comment만 달아놓고 작성만 해놓은 상태이다.
+
+이후 router가서 route()를 사용해서 get 과 post 메소드를 만들어 놓는다.
+
+이후 view가서 base.pug에 anchor을 설치해두고 upload page로 갈 수 있게 해놓는다.
+
+get으로 타고 갈테니 render을 해주고 pageTitle 변수를 넘겨주어야 한다.
+
+이후 form을 생성한다.
+
+extends base.pug
+
+block content 
+    form(method="POST") 
+        input(type="text", placehloder="Title", name="title",required)
+        input(type="submit", value="Upload Video")
+
+먼저 브라우저가 POST메소드를 가지고 /videos/upload로 대려다 준다. 그리고 컨트롤러는 redirect해서 다른 곳으로 가라고 말하는 것이다.
+
+controller.js
+
+export const getUpload = (req, res) => {
+  return res.render("upload", { pageTitle: "Upload Video" });
+};
+
+export const postUpload = (req, res) => {
+  const { title } = req.body;
+  const newVideo = {
+    title,
+    rating: 0,
+    comments: 0,
+    createdAt: "just now",
+    views: 0,
+    id: videos.length + 1,
+  };
+  videos.push(newVideo);
+  return res.redirect("/");
+};
+
+이렇게 하면서 마무리가 된다.
+
+
+
+
+javascript for in 과  for of 차이 기억하기.
+[자바스크립트 for in vs for of 반복문 정리 - JavaScript - 자바스크립트 개발자 포럼](https://jsdev.kr/t/for-in-vs-for-of/2938)
+
+req를 통해서 url정보 따올 수 있음 query
+
+includes함수 알아보기 . 배열 안에 있는 (python으로 따지자면 in)
+
+pug에서 즉, html에서 form형식으로 data를 GET방식으로 보내면 req.body에 정보가 담겨 오지 않고, POST방식으로 해야 req.body에 정보가 담겨온다. GET방식의 경우 req.query를 사용해야 한다.
+
+day11
+챌린지를 하는 과정에서 오류가 발생했다.
+
+오류는 다음과 같다.
+
+[Screenshot](스크린샷, 2022-01-13 15-25-00.png)
+
+Add로 가고 나서 오류가 났는데 그 이후부터 home, detail으로 가 이와 같은 오류가 발생을 하는 것을 확인했다.
+
+이 문제는 다음과 같이 해결을 했다.
+
+현재 나의 router는 다음과 같이 되어 있었다.
+
+router.js
+
+import express from "express";
+import { home, movieDetail, getAdd, postAdd } from "./movieController";
+
+const movieRouter = express.Router();
+
+movieRouter.get("/", home);
+movieRouter.get("/:id", movieDetail);
+movieRouter.route("/add").get(getAdd).post(postAdd);
+
+export default movieRouter;
+
+여기서 :id가 변수로서 활용되는데 정규식을 받지 않아서 모든 문자를 전부 변수 취급해버린다.
+
+url에 id를 받고 가야 영화를 꺼내오고 올바르게 랜더링할 수 있는데 그것이 안되서 오류가 나버리는 것이다. 즉 비어있는 null 값으로 받아오는 것이다. 실제로 add를 눌러보니 detail의 controller의 console.log(movie)가 출력이 되었고, 출력은 undefined로 되어있다.
+
+textarea tag를 사용할 때 linebreak에 주의하자
+
+javascript에서 object를 만들 때, key 이름과 value에 넣어줄 변수명을 같게해서 넣어주고 싶다면 다음과 같이 하면 된다.
+
+
+  const movie = {
+    title,
+    synopsis,
+    genres,
+  };
+  
+
+
+

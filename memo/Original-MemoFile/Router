@@ -1,0 +1,163 @@
+ 라우터는 controller와 URL의 관리를 쉽게 해준다.
+ -> mini application 만들어 주는것
+ 
+ ### Global Router
+/ -> Home
+/join -> Join	
+/login -> Login
+/search -> Search
+
+### Users Router
+/users/edit -> Edit user
+/users/delete -> Delete user
+
+### Vidoes Router
+/videos/watch -> Watch Video
+/videos/edit -> Edit Video
+/vidoes/delete -> Delete Video
+/vidoes/comments -> Comment Video
+/vidoes/comments/delete -> Delete A Comment of a Video
+
+이렇식으로 만들 예정이고 Router는 3가지의 Router가 나오는 것이다.
+
+만드는 방식은 다음과 같다.
+기본적으로 express를 이용하고 있기에 
+const globalRouter = express.Router();
+const userRouter = express.Router();
+const videoRouter = express.Router();
+이정도로 만들어질 것 같다.
+
+활용하는 방식은 이와 같다.
+app.use("/", globalRouter);
+app.use("/vidoes", videoRouter);
+app.use("/users", userRouter);
+
+이것을 작성하고,
+함수를 하나씩 만들껀데 이와같이 만들었다고 보자.
+
+const handleHome = (req, res) => res.send("Home");
+
+const handleEditUser = (req, res) => res.send("Edit User");
+
+const handleWatchVideo = (req, res) => res.send("Watch Video");
+
+이것들을 사용하는 방법은 앞서 express part에서 배웠듯이 app.get("/", handleHome); 과 비슷한 방식으로
+router.get을 활용할 것이다.
+
+globalRouter.get("/", handleHome);
+userRouter.get("/edit", handleEditUser);
+videoRouter.get("/watch", handleWatchVideo);
+
+지금까지 배운 코드를 정리해보자면 server.js는 아래와 같이 될 것이다.
+
+import express from "express";
+import morgan from "morgan";
+
+const PORT = 4000;
+
+const app = express();
+const logger = morgan("dev");
+app.use(logger);
+
+const globalRouter = express.Router();
+
+const handleHome = (req, res) => res.send("Home");
+
+globalRouter.get("/", handleHome);
+
+const userRouter = express.Router();
+
+const handleEditUser = (req, res) => res.send("Edit User");
+
+userRouter.get("/edit", handleEditUser);
+
+const videoRouter = express.Router();
+
+const handleWatchVideo = (req, res) => res.send("Watch Video");
+
+videoRouter.get("/watch", handleWatchVideo);
+
+app.use("/", globalRouter);
+app.use("/videos", videoRouter);
+app.use("/users", userRouter);
+
+const handleListening = () =>
+  console.log(`✅ Server listenting on port http://localhost:${PORT} 🚀`);
+
+app.listen(PORT, handleListening);
+
+코드 정리하기
+
+코드를 정라히기 위해서 나눌 수 있는 것을 살펴보자면,
+3개의 Router로 처음에 나눠서 시작했으니 routers라는 폴더 안에서 3개로 나누면 될 것 같다.
+
+routers -> globalRouter.js, userRouter.js, videoRouter.js로 나눠서 관리된다.
+globalRouter.js 부터 살펴보자면,
+server.js에서 express를 import했어도 다시 파일에서 express를 쓰고싶으면 다시 import를 해줘야한다.
+import express from "exrpess";
+
+const globalRouter = express.Router();
+
+const handleHome = (req, res) => res.send("Home");
+
+globalRouter.get("/", handleHome);
+이런식으로 정리가 될 것 같다.
+전부 동일한 방식으로 옮겨준 후 server.js정리를 하고나서 실행을 해보면 globalRouter in no defined 오류가 날 것이다.
+Why? 옮겨준 것을 import하지 않아서 그렇다. 즉, globalRouter.js에서 globalRouter를 import해줘야 한다.
+import를 거치기 전에 export를 먼저 거쳐야 하므로 globalRouter.js에서 export default globalRouter;를 써준다.
+server.js 에선 import globalRouter from "./routers/globalRouter";로 처리 해준다.
+default export로 해줘서 server.js에서 받아서 쓸 때는 이름이 같을 필요가 없다. 
+ex) import global from "./routers/globalRouter"; 이런식으로 가능하다는 것이다.
+
+server.js에서 import 하고 app.get이 아닌 app.use를 사용해서 app.use("/videos", videoRouter);이런 식으로 사용한다.
+
+videoRouter안에 들어가서 맞는 주소로 찾아 갈 것이다 ex) /vidoes/ + /watch
+videoRouter안에 들어가있고 비디오 라우터는 이미 /vidoes/인 것.
+
+
+여기서 진행하다보면, controller만 봐도 현재는 한줄 코드 지만 여러가지로 기능구현이 들어가기 시작하면 코드가 길어질 것이다.
+이것을 Router.js안에 넣어두는 것은 좋지않다 Router&Controller가 아니므로 분리하는 작업이 필요하다.
+globalController은 필요없으니(유저, 비디오 위주이므로) userController, videoController를 만든다.
+router와는 다르게 controller는 여러가지 함수를 export해줘야 하므로 export default가 아닌 각각의 함수를 export해준다.
+
+ex) export const trending = (req, res) => res.send("Home Page Vidoes");
+이런식으로 사용하면 되겠다.
+
+import 할때는 이와 같이 한다.
+import {join, ........} from "directory";
+
+동영상의 URL의 경우 /videos/watch -> /videos/:id 이런 식으로 바꾸는 것이 좋다.
+:id는 동영상의 id
+
+:를 사용하는 것은 parameter인데 이것을 이용하여 url안에 변수를 포함시킬 수 있게 해준다.
+(express 기능)
+
+req.params의 경우 변수명과 변수에 대입된 값 담겨 있다.
+
+url에 변수를 사용할 때 주의할 점은 변수가 사용된 url를 다른 url보다 위에 두면 코드 자체를 읽을 때 위에서 부터 읽어 내려 가기 때문에 다른 url를 전부 변수로 인식해 버리는 것이 있다. 그래서 변수를 사용하는 url를 아래다 둬야한다.
+
+그렇다면, Id를 받을 때 문자는 안 받고 숫자만 받게 하려면 어떻게 해야 하나?
+
+참고로, app.get('/ab*cd', function(req, res) {
+	res.send('ab*cd');
+	}) 이런식으로 코드를 처리한다면 route path 는 abcd, abxcd, abRandomcd이런 식으로 전부 다 받게 될 것이다. * 나 + 나 ? 등등 정규식(Regular Expression)을 활용 할 수 있는 것이다.
+	
+그렇다면 정규식을 사용해서 숫자만 선택하려면 어떻게 하면 될까?
+
+/(\d+)이런 식으로 하면 된다.
+/(ran\w+) 이거 같은 경우 ran다음에 아무 문자오는것을 전부다 선택 하겟다는 의미
+
+최종적으로 사용되는 형태는 다음과 같다.
+Router.get("/:id(\\d+)", function);
+javascript이기에 \를 하나 더 추가한 것
+
+하지만 앞으로 할 데이터베이스는 이런 형식이 아니므로 이 정규식을 사용하지는 않을 것이다.
+
+https://expressjs.com/en/4x/api.html#router Router 참고사이트
+https://expressjs.com/en/4x/api.html#router.param routrer.param() 참고사이트
+
+
+
+
+
+

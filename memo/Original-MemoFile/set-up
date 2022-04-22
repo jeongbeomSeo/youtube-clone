@@ -1,0 +1,62 @@
+express and mongoDB사용 예정
+
+Vscode는 정리하면 브라우저와 테스트 에디터가 필요한 소프트웨어
+
+nodejs는 브라우저 밖에서 돌아가는 자바스크립트 
+
+자바스크립트는 브라우저에서만 사용됨
+만든 이유? -> 웹사이트와 좀 더 상호작용 할 수 있게 만들기 위해 
+
+npm은 nodeJS와 상호작용을 할 수 있게 해준다. 
+
+json은 프로그래머가 파일에 정보를 저장하기 위해 만든 방식
+
+package.json에서
+1. "main"
+-- 우리가 만들고 배포한 package를 다른 사람들이 설치하면 main을 사용하게된다.
+
+2. "scripts"
+-- 우리가 실행하고 싶은 것들을 실행해준다.
+
+3. "dependencies"
+-- 프로젝트를 동작시킬 때 필요한 모듈들이 어떤건지 정보를 담고 있다.
++ 필요한 것이 없을때는 npm이 찾아서 설치를 한다. 
+-> 이것으로 인해서 git에 node_modules같은 폴더를 올릴 필요가 사라진것이다. depenencies가 알려주므로
+
+ex) npm install --save-dev @babel/core
+-> babel을 다운받는 것인데 --save-dev는 package.json에서 "devDependencies"에 정보를 담으라고 말해주는 것이다. 
+
+dependencies와 devDependencies의 차이는?
+devDependencies는 개발자에게 필요한 dependencies이다.
+
+babel을 이용해서 최신 문법 코드를 쓸 수 있다.
+
+preset은 babel을 위한 엄청 거대한 플러그인이다. 
+특히, preset-env가 가장 유명하다 (Smart preset)
+
+babel을 사용함으로써,
+const express = require("express"); -> import express from "express";
+이런식으로 코드를 쓸 수 있다.
+
+순서 과정:
+npm express를 통해서 node_modules폴더가 생성되고 package-lock.json파일이 생성되었다.
+
+node_modules폴더를 배포할 때마다 올릴 필요가 없으니깐 .gitignore파일을 생성해서 제외 시켜준다.
+
+npm install --save-dev @babel/core의 명령어를 통해 babel을 설치해 준다.
+
+touch babel.config.json를 이용하여 설정파일을 만든다.
+
+npm instal @babel/preset-env --save-dev를 이용하여 설치해준다.
+
+npm i nodemon --save-dev을 통해서 수정될 때 자동 저장 해주는 기능을 추가한다. 
+
+npm install --save-dev @babel/node
+
+여기까지 셋업이 되었다면,
+  "scripts": {
+    "dev": "nodemon --exec babel-node index.js"
+  }
+코드는 이런식으로 되어 있을 것이다.
+
+
