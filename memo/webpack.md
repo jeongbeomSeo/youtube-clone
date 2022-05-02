@@ -105,7 +105,9 @@ Loader은 나중에 살펴보기로 하자.
 
 먼저 우리가 설정해줘야 할 것은 entry, output이다.
 
-**Entry**는 우리가 처리하고자 하는 파일이 들어가면 되는데, src 가서 **client**라는 폴더를 만들자. (폴더명은 client말고 **frontend** 혹은 **asset**으로 사용하기도 한다. 물론, 아예 다른 명을 사용해도 된다.)
+**Entry**는 우리가 처리하고자 하는 파일이 들어가면 되는데, src 가서 **client**라는 폴더를 만들자.
+
+> 폴더명은 client말고 **frontend** 혹은 **asset**으로 사용하기도 한다. 물론, 아예 다른 명을 사용해도 된다.
 
 client안에 js라는 폴더를 만들었고, main.js 파일을 만들면 되겠다. client -> js -> main.js
 
@@ -113,17 +115,21 @@ client안에 js라는 폴더를 만들었고, main.js 파일을 만들면 되겠
 
 entry와 output은 다음과 같이 해두면 된다.
 
+```js
 module.exports = {
-entry: "./src/client/js/main.js",
-output: {
-filename: "main.js",
-path: "./assets/js",
-},
+  entry: "./src/client/js/main.js",
+  output: {
+    filename: "main.js",
+    path: "./assets/js",
+  },
 };
+```
 
-**output**을 위해서 파일명을 정해주면 되고, 파일을 어디에 저장할지 지정해주면 된다.(해당 파일과 폴더가 없어도 자동으로 생성된다.)
+**output**을 위해서 파일명을 정해주면 되고, 파일을 어디에 저장할지 지정해주면 된다.
 
-이 부분을 해석하자면 "현재 src/client/js에 있는 main.js파일을 ( ) 방식으로 변경/전환 시켜서 작업이 끝난 후에 그 파일을 main.js라는 파일명으로 ./assets/js에 저장해줘!" 라고 보면 된다.
+> 해당 파일과 폴더가 없어도 자동으로 생성된다.
+
+이 부분을 해석하자면 **"현재 src/client/js에 있는 main.js파일을 ( ) 방식으로 변경/전환 시켜서 작업이 끝난 후에 그 파일을 main.js라는 파일명으로 ./assets/js에 저장해줘!"** 라고 보면 된다.
 
 ( ) 방식을 설정해줘야 하겠지만, 일단 먼저 실행이 되는지 부터 확인해 보자.
 
@@ -138,7 +144,7 @@ webpack실행은 nodemon실행할 때와 동일하게 package.json가서 설정�
 
 이렇게 하면 configuration output의 경로가 absolute path가 아니라는 오류가 나온다.
 
-이것을 **dirname이 해결해준다. **dirname을 출력해보자.
+이것을 **dirname**이 해결해준다. **dirname**을 출력해보자.
 
 ```js
 console.log("Current path is this: " + __dirname);
@@ -153,7 +159,7 @@ module.exports = {
 
 ![console.log dirname](./screenshot/consoleLog-dirname.png)
 
-[dirname(directory name)](https://nodejs.org/api/path.html#pathdirnamepath) 은 말 그대로 파일까지의 경로 전체를 말하는 것이다.
+[dirname(directory name)](https://nodejs.org/api/path.html#pathdirnamepath)은 말 그대로 파일까지의 경로 전체를 말하는 것이다.
 
 그리고 [path.resolve()](https://nodejs.org/api/path.html#pathresolvepaths)도 사용할 것인데, 이 함수는 몇 개가 됐든 입력하는 파트들을 모아서 경로로 만들어 주는 것이다.
 
@@ -226,7 +232,7 @@ module.exports = {
 
 여기서 rules라는 개념도 한번 짚고 넘어가자.
 
-- rules: 각각의 파일 종류에 따라 어떤 전환을 할 것인지를 결정
+- **rules**: 각각의 파일 종류에 따라 어떤 전환을 할 것인지를 결정
 
 위 코드 rules에 의하면 모든 CSS파일들을 가져다가 해당 변환('style-loader')를 적용시킬 것이다.
 
@@ -302,7 +308,7 @@ app.use("/assets", express.static("assets"));
 > 만약 여기서 /assets대신 /static을 사용하면 어떻게 될까?
 > localhost:4000/static/js/main.js로 가면 화면이 나올까? 나온다.
 >
-> 결국 설정해둔 url이랑 폴더명이랑 달라도 설정해둔 url을 입력하면 해당 폴더로 접근하게 된다는 것이다.
+> 결국 설정해둔 url이랑 폴더명이랑 달라도 설정해둔 url을 입력하면 해당 폴더로 접근하게 된다는 것이다. static으로 사용하면서 설명하겠다.
 
 이제 assets/js/main.js를 base.pug랑 연결시켜주면 된다.
 

@@ -22,6 +22,7 @@
 7.  [User Authentication](./user-authenticatoin.md)
 8.  [User Profile](./user-profile.md)
 9.  [Web Pack](./webpack.md)
+10. [Video Player](./videoPlayer.md)
 
 [Challenge](./challenge.md)의 경우 challenge를 하면서 알게 된 것들을 정리한 파일입니다.
 

@@ -182,7 +182,6 @@ handlePause 와 handlePlay 변수의 경우 버튼을 클릭하면 발생시키�
 
 이 경우 버튼만을 이용해서 동영상을 재생 또는 정지 하는 경우에만 적용되므로 문제가 있다. 그래서 위와같이 나눠준 것이다.
 
-
 요번엔 Mute버튼을 다뤄볼 것인데, 이부분에서 신경써야 될 점은 Mute버튼을 눌러서 음소거가 되는 순간 볼륨 바(Range)도 움직여야 되는것에 신경써야 한다.
 
 먼저 바를 신경쓰지 않고 버튼만을 코딩했을 경우 다음과 같이 된다.
@@ -614,6 +613,1105 @@ const handleMouseMove = () => {
 위에 첫번째 if문은 두번째 if문 조건을 채워주지 못하지만 두번째 if문은 첫번째 if문 조건을 채워주고 있는 것이다.
 
 마지막 움직인 시점에서 마우스가 멈추든 나가있든 똑같이 봐도 무방한 것이다.
+
+
+Views
+
+
+이제 Views Controller를 다뤄보자.
+
+이 Part에선 사용자가 동영상을 본 횟수를 기록해주는 기능을 구현하는 것이다.
+
+이번에는 템플릿을 렌더링하지 않는 Views를 만들건데, 이걸 api views라고 한다.
+
+대부분 인터넷에서 이렇게 하고있다. 요즘 시대에는 백엔드에서 템플릿을 렌더링 하지 않는다.
+
+대부분의 웹 애플리케이션은 프론트와 백이 나눠져있다.
+
+백엔드가 인증, DB등을 처리하고 프론트엔드는 좀 다르다. 
+
+보통 VanillaJS, Svelte, ReactJS 등으로 만드는데 우리는 SSR(Server Side Rendering)방식을 사용하고 있다. 
+
+서버가 템플릿을 렌더링하는 일까지 처리한다는 것이다.
+
+요즘에는 React를 이용해서 프론트엔드를 만들고 지금 우리가 배우고 있는 NodeJS로 백엔드를 만든다.
+
+보통 NodeJS로는 템플릿을 렌더링하지 않는다. 
+
+이번에는 템플릿을 렌더링하지 않는 views를 만들것이다. 이것을 하고나면 템플릿을 렌더링하는 views와 api views의 차이를 알게 될 것이다.
+
+API는 프론트 엔드와 백엔드가 서버를 통해 통신하는 방법을 말한다.
+
+우선 router를 만들어보자. 
+
+videoRouter.js에서 만들어도 되지만 새롭게 apiRouter라는걸 하나 만들어보자.
+
+말했다시피 api는 백엔드가 템플릿을 렌더링하지 않을 때 프론트와 백엔드가 통신하는 방법을 말한다.
+
+routers/apiRouter.js
+
+import express from "express";
+
+const apiRouter = express.Router();
+
+export default apiRouter;
+
+
+이정도로 하고 이것을 server에서 사용하면 된다.
+
+server.js 
+
+app.use("/api", apiRouter);
+
+유저가 영상을 시청하면 백엔드에 요청을 보낼건데, 이 요청으로는 URL을 바꾸지 않는다.
+
+이게 무슨 말이냐면 요청을 보내더라도 URL을 바꾸지 않고 템플릿을 렌더링하지 않겠다는 것이다.
+
+자바스크립트로 요청을 보낼건데 어떻게 하는지 아래에서 확인하자.
+
+router.js안에 다음과 같은 코드를 추가할 것인데 이것이 무슨 일을 하는지 확인해 보자.
+
+		apiRouter.post("/videos/:id([0-9a-f]{24})/view", registerView);
+
+이것은 localhost:4000/api/videos/:id/view인 URL에 Post요청을 보내면 조회수를 기록하게 만들것이란 것이다.
+
+registerViews는 비디오를 관리하는 것이니 videoController.js에서 적어주기로 하고 이 함수의 역할은 해당 video를 가져와서 조회수를 기록해주는 역할이다.
+
+export const registerView = async (req, res) => {
+  const { id } = req.params;
+  const video = await Video.findById(id);
+  if (!video) {
+    return res.status(404);
+  }
+  video.meta.views = video.meta.views + 1;
+  await video.save();
+  return res.status(200);
+};
+
+
+이제 이 URL을 프론트엔드에서 호출해야 하는데, 우리는 보통 브라우저에서 URL 호출하는 것에 익숙하다.
+
+하지만, 이번엔 이동 없이 URL을 호출할 수 있는 방법을 해보는 것이다. 
+
+interactive하게 만들 수 있는 가장 기본적인 방법이다.
+
+interactivity라 함은 URL이 바뀌지 않아도 페이지에서 변화가 생기는 것을 말한다.
+
+이번에는 클라이언트에서 자바스크립트로 이 URL에 요청하는 것을 만들어 볼 것이다.
+
+client -> js- > videoPlayer.js에 URL로 요청하는 이벤트를 추가할 것이다.
+
+event를 추가할 것인데 요번엔 video에서만 가능한 이벤트 "timeupdate"와 동일하게 video에서만 가능한 것을 추가할 것이다 바로, ended이다.
+
+그리고 function안에서는 fetch를 사용해서 백엔드에 요청을 보내줄 것이다.
+
+일단 다음과 같이 해보자.
+
+const handleEnded = () => {
+  fetch("/api/videos/skdlfnaksdnfkladnkflansdlkfan/view")
+}
+video.addEventListener("ended", handleEnded);
+
+fetch안에 주소는 /api/videos/:id/view의 예시로서 일단 적어본 것이다.
+
+만약 이렇게한다면 잘 작동할까? 생각해보면 handleEnced function이 비디오의 id를 알지 못한다.
+
+그래서 이 템플릿을 렌더링하는 pug에서 비디오에 대한 정보를 넘겨 줘야 한다.
+
+프론트엔드에서 자바스크립트가 알 수 있도록 말이다.
+
+어떻게 하면 될까?
+
+간단하게 span만들고 video._id를 보여주도록 만들어도 가능은 하지만, 보기 좋지는 않다.
+
+가장 좋은 방법은 우리가 직접 데이터를 만들어서 HTML에 저장하는 것이다.
+
+pug한테 video id 정보를 HTML의 어딘가에 저장하라고 알려줄것이다.
+
+data attribute를 이용하면 된다.
+
+data attribute는 data-로 시작하는 attr를 말하는데, 원하는 어떤 것이든 저장할 수가 있다.
+
+HTML specification과도 문제가 전혀 없다.
+
+그리고 dataset을 이용하면 자바스크립트로 데이터에 정말 쉽게 접근할 수 있다.
+
+이걸 사용해서 pug를 렌더링할 때 데이터를 저장한다. 
+
+extends base
+
+block content
+    div#videoContainer(data-id=video._id)
+    ...
+    
+    
+다음과 같이 해주면 된다.
+
+이렇게 해주고 videoPlayter.js에서 다음과 같이 했을 때 출력 결과는 아래와 같다.
+
+console.log(videoContainer.dataset);
+
+스크린샷, 2022-04-25 17-15-08.png
+
+일단 코드는 다음과 같이 짜질것 같다.
+
+
+const handleEnded = () => {
+  const { id } = videoContainer.dataset;
+  fetch(`/api/videos/${id}/view`);
+};
+
+이렇게 fetch하면 GET 요청을 보내게 되는 것이다.
+
+우리는 apiRouter에서 만들때 POST 요청을 받도록 만들어 놨다. method를 추가해주자.
+
+const handleEnded = () => {
+  const { id } = videoContainer.dataset;
+  fetch(`/api/videos/${id}/view`, {
+    method: "POST",
+  });
+};
+
+
+이렇게 하고 동영상을 다 재생하면 다음과 같은 결과가 나온다.
+
+스크린샷, 2022-04-25 17-22-04.png
+
+statuscode도 200 이 아닌 404로 받는다. 왜 그런것일까?
+
+export const registerView = async (req, res) => {
+  const { id } = req.params;
+  const video = await Video.findById(id);
+  if (!video) {
+    return res.status(404);
+  }
+  video.meta.views = video.meta.views + 1;
+  await video.save();
+  return res.status(200);
+};
+
+여기서 status만 쓴다는 것은 사실 상태코드만 적어준 것일 뿐 아무것도 보내고 있지 않은 상태 즉 return을 아무것도 하지 않고 있는 것이다. 다른것들을 보면 res.status().render()이와같이 render를 하고 있는 것처럼 해줘야 하는 것이다. 하지만, 우리는 status code만 보내줄려고 하는 것일 뿐 rendering은 하지 않는다고 헀다. 그때 사용하는 것이 sendStatus()이다.
+
+export const registerView = async (req, res) => {
+  const { id } = req.params;
+  const video = await Video.findById(id);
+  if (!video) {
+    return res.sendStatus(404);
+  }
+  video.meta.views = video.meta.views + 1;
+  await video.save();
+  return res.sendStatus(200);
+};
+
+결과는 다음과 같다.
+
+스크린샷, 2022-04-25 17-32-11.png
+
+이번엔 비디오 녹음기를 만들어 보자. 
+
+5초로 제한을 두고, 5초가 지나면 사람들은 녹화된 비디오를 다운로드 받을 수 있게 되는 기능이다.
+
+이전과 동일하게 client -> js -> recoder.js 이와 같은 경로로 만들자.
+
+만들었으면? webpack이 이 파일을 처리해줘야 하니깐 webpack.config.js를 수정할 필요가 있다.
+
+entry에 다음과 같이 추가해주자.
+
+webapack.config.js
+
+...
+
+  entry: {
+    main: "./src/client/js/main.js",
+    videoPlayer: "./src/client/js/videoPlayer.js",
+    recoder: "./src/client/js/recoder.js",
+  },
+  
+  ...
+  
+재시작하면 assets/js/recoder.js파일이 생성된다. 여기까진 이전과 동일하다.
+
+watch.pug에 했던 방식과 동일하게 upload.pug에 할 것인데 다음과 같이 해주자.
+
+upload.pug
+
+...
+
+
+block scripts 
+    script(src="static/js/recoder.js")
+    
+이렇게 해주면 된다. (잘 작동하는지 확인하고 싶은 방법으론 console.log를 사용하거나 alert를 사용)
+
+녹음을 하기위해서 누를 수 있는 버튼을 만들어줘야할 것 같다. 
+
+    div 
+        button#startBtn Start Recoding
+        
+pug에 이 부분을 추가하고 js에서 받아서 처리해주기 시작하자.
+
+함수를 사용할 것인데 이 함수는 사용자의 navigator에서 카메라와 오디오를 가져다 줄 것이다. 
+
+navigator.mediaDevices.getUserMedia를 호출할 것이다.
+
+하지만, 이 기능을 사용하는데는 시간이 걸린다.
+
+왜냐하면 카메라 사용 여부와 마이크 사용 여부도 물어봐야 하기 때문이다. 
+
+그래서 promise방식을 사용하거나 async await방식을 사용해야 한다.
+
+지금까지의 전체 코드는 다음과 같다.
+
+const startBtn = document.getElementById("startBtn");
+
+const handleStart = async () => {
+  const stream = await navigator.mediaDevices.getUserMedia({ 
+    audio: true,
+    video: true
+  })
+  console.log(stream);
+}
+
+startBtn.addEventListener("click", handleStart);
+
+결과는 다음과 같다.
+
+스크린샷, 2022-04-25 17-51-43.png
+
+console.log는 커녕 오류가 나온다.
+
+이것은 프론트엔드 상에서 async랑 await를 쓰려면 regeneratorRuntime을 설치해야 해서 나는 오류다.
+
+굳이 안해도 되고 promise만 써도 무방하긴 하다.
+
+우린 설치하자. npm i regenerator-runtime
+
+그런 다음에 recoder.js의 맨위에 다음과 같이 import해주면 된다.
+
+import regeneratorRuntime from "regenerator-runtime";
+
+문제없이 작동될 것이지만, 우리는 이것을 main.js에다가 넣어주는게 좋아보인다.
+
+main.js
+
+import "../scss/styles.scss";
+import regeneratorRuntime from "regenerator-runtime";
+
+그리고 이것을 base.pug에 추가해주자.
+
+base.pug
+
+...
+
+    script(src="/static/js/main.js")
+    block scripts
+        
+이렇게 해주면서, 이제 모든 페이지에서 async와 await를 사용할 수 있게 된것이다.
+
+아니면 regenertorRuntime을 필요로 하는 모든 JavaScript 파일에 붙여줘도 된다.
+
+그래서 위의 console.log의 결과는 다음과 같다.
+
+스크린샷, 2022-04-25 18-00-49.png
+
+이제 버튼은 navigator의 mediaDevices API를 호출하고 있는데, 이 안에 geUserMedia라는 function이 있다. 만일 사용자가 요청을 수락하게 되면 stream을 받아오게 된다.
+
+카메라에 잡힌 동영상을 미리보기를 할 수 있게 video element를 추가해 보자. 
+
+먼저 upload.pug에 다음과 같이 해주자.
+
+block content
+    div
+        video#preview
+        button#startBtn Start Recoding
+        ...
+        
+그 이후 javascript에서 받아와서 처리해주자.
+
+const startBtn = document.getElementById("startBtn");
+const video = docuemnt.getElementById("preview");
+
+const handleStart = async () => {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: true,
+    video: true,
+  });
+  video.srcObject = stream;
+  video.play();
+};
+
+보시다시피 video를 가져와서 function안에다가 넣어서 처리해주면 된다. 
+
+pug를 보면 src가 없는 video이라서 거기에 stream을 넣어준 것이다.
+
+srcObject는 video가 가질 수 있는 무언가를 의미한다. HTML 요소인 src와는 다른것에 주의하자.
+
+만약 크기를 바꿔주고 싶다면 다음과 같이 해주면 된다.
+
+...
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: true,
+    video: { width:200px, height: 100px },
+  });
+  ...
+
+우리는 이것을 처리할 때 저장하는 것이 아닌 녹화를 해야 한다는 것에 집중해볼 필요가 있다.
+
+우리 컴퓨터에 넣는게 아니라 녹화 후 브라우저에 넣어주는 것이다.
+
+이를 위해 우린 mediaRecoder를 사용한다.
+
+mediaRecoder는 말 그대로 녹화해줄 수 있게 도와준다.
+
+이전 까지의 방식을 수정할 필요가 있는데 왜냐하면, "Strat Recording"버튼을 눌러서 미리보기가 아닌 실제 녹화가 이루어져야 한다.
+
+그말은 미리보기가 먼저 이루어져야 한다는 것이다.
+
+const startBtn = document.getElementById("startBtn");
+const video = document.getElementById("preview");
+
+const handleStop = () => {
+  startBtn.innerText = "Strat Recording";
+  startBtn.removeEventListener("click", handleStop);
+  startBtn.addEventListener("click", handleStart);
+};
+
+const handleStart = () => {
+  startBtn.innerText = "Stop Recording";
+  startBtn.removeEventListener("click", handleStart);
+  startBtn.addEventListener("click", handleStop);
+};
+
+const init = async () => {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: true,
+  });
+  video.srcObject = stream;
+  video.play();
+};
+
+init();
+
+startBtn.addEventListener("click", handleStart);
+
+처음에 미리보기가 나오도록 해놓았고, 문구가 계속해서 바뀔 수 있도록 eventListener를 추가하고 지워주고 해줬다.
+
+이제 실제 녹화가 이루어지도록 할것인데 mediaRecoder를 이용해서 stream을 만들어 주면 된다.
+
+우린 이미 stream을 가지고 있으니 그것을 medaiRecoder에 전달해주면 될것이다.
+
+const handleStart = () => {
+	...
+	
+	const recoder = new MediaRecoder(stream);
+};
+
+이와 같이 해줘야 하는데 문제점은 const init안에다가 우리는 stream을 생성해 놓았기 때문에 init function밖에서 사용할 수가 없다.
+
+그래서 전역변수 let stream을 사용하자. 이것은 이전에도 많이 했던 부분이라 생략하도록 하겠다.
+
+const handleStart = () => {
+  startBtn.innerText = "Stop Recording";
+  startBtn.removeEventListener("click", handleStart);
+  startBtn.addEventListener("click", handleStop);
+
+  const recoder = new MediaRecorder(stream);
+  recoder.ondataavailable = (e) => {
+  	console.log("Recording Done!");	
+  	console.log(e);
+  	console.log(e.data);
+  }
+  console.log(recoder);
+  recoder.start();
+  console.log(recoder);
+  setTimeout(() => {
+    recoder.stop();
+  }, 10000);
+};
+
+이렇게 한 후 결과를 한번 확인해 보자.
+
+스크린샷, 2022-04-26 13-48-33.png
+
+이것처럼 ondataavailable의 경우 녹화가 종료가 된 후에 실행이 되는 event이다. 그리고 처음에 recoder가 start하기 전엔 state: "inactive"였다가, start()를 해준 후에는 state가 "recording"으로 바꼇다.
+
+이후 10초있다가 녹화가 종료가 되고 ondataavailable이 실행이 됐다고 볼 수 있다.
+
+이것이 처음 두개이다.
+
+스크린샷, 2022-04-26 13-50-27.png
+
+이것이 event안에 내용들이다.
+
+스크린샷, 2022-04-26 13-50-48.png
+
+data안에 있는 내용들이 방금 녹화한 비디오가 들어가 있는 것이다.
+
+handleStop function에는 recoder를 넣어줘야 하는데 handleStart fnuction안에서 선언해놓았기 때문에 힘들다. 그래서 동일한 방식으로 전역 변수로 처리해준다.
+
+const handleStop = () => {
+  startBtn.innerText = "Strat Recording";
+  startBtn.removeEventListener("click", handleStop);
+  startBtn.addEventListener("click", handleStart);
+
+  recoder.stop();
+};
+
+const handleStart = () => {
+  startBtn.innerText = "Stop Recording";
+  startBtn.removeEventListener("click", handleStart);
+  startBtn.addEventListener("click", handleStop);
+
+  recoder = new MediaRecorder(stream);
+  recoder.ondataavailable = (event) => {
+    const video = URL.createObjectURL(event.data);
+    console.log(video);
+  };
+  recoder.start();
+};
+
+여기서 createObjectURL 은 브라우저 메모리에서만 가능한 URL을 만들어 준다.
+
+그리고 이 URL은 파일을 가르키고 있다.
+
+결과는 다음과 같다.
+
+스크린샷, 2022-04-26 14-23-07.png
+
+하지만 이 URL은 우리 서버 상에는 없다.
+
+브라우저에 의해 만들어졌고, 접근할 수 있는 파일을 가르키고 있고 메모리 상에 있는것이다.
+
+확인하기 위해서 video를 미리보기가 아닌 녹화한 영상이 나오도록 해보자.
+
+그러기 위해선 먼저 srcObject를 지워야 한다.
+
+다만, init function에서 지우는 것이 아니라 아래와 같이 handleStart function에서 지우면 된다.
+
+const handleStart = () => {
+  startBtn.innerText = "Stop Recording";
+  startBtn.removeEventListener("click", handleStart);
+  startBtn.addEventListener("click", handleStop);
+
+  recoder = new MediaRecorder(stream);
+  recoder.ondataavailable = (event) => {
+    const videoFile = URL.createObjectURL(event.data);
+    video.srcObject = null;
+    video.src = videoFile;
+    video.loop = true;
+    video.play();
+  };
+  recoder.start();
+};
+
+이제 녹화를 멈췄을 때 handleStart를 다시 할 수 있게 하는 것이 아닌 Download Recording을 구현해보자.
+
+다음과 같이 해주자.
+
+const handleDonwload = () => {
+  const a = document.createElement("a");
+  a.href = videoFile;
+  a.download = "MyRecording.webm";
+  document.body.appendChild(a);
+  a.click();
+};
+
+
+물론이겠지만, 여기서도 videoFile을 쓰기 위해서 전역 변수로 바꿔서 처리해줘야 한다.
+
+이것은 실제로 브라우저에 display를 하는게 아니라 버튼을 눌렀을 때 함수가 실행이 되면서 다운로드 되도록 만들어 놓은 것이다.
+
+body에 존재하지 않는 링크는 클릭을 할 수 없기 때문에 이렇게 해놓은 것이다.
+
+이제 우리는 FFmpeg를 가지고 비디를 webm 에서 mp4로 변환해보자.
+
+또 FFmpeg를 이용해서 비디오의 썸네일을 추출할 것이다.
+
+FFmpeg는 비디오나 오디오 같은, 어떤 종류의 미디어 파일을 다룰 수가 있다.
+
+FFmpe는 기본적으로 백엔드에서 돌아간다.
+
+유튜브같은 경우에도 비디오를 업로드할 때마다 아마 FF를 이용해서 비디오를 여러가지 포맷과 화질로 인코딩할 것이다. 유튜브에 가면 비디오의 화질을 변경할 수 있는 것이 그런 경우다. 다른 화질의 네 가지 버전으로 만들기 때문이다.
+
+일단 첫번째 개념은 FFmpeg는 오디오를 추출할 수 있고, 오디오 형식을 변경할 수 있다. 비디오를 가지고 gif를 만들수 있고, 스크린샷을 찍을 수도 있고, 오디오도 제거할 수 있고 자막을 추가 할 수도 있다.
+
+굉장히 할 수 있는것이 많다.
+
+두번째 개념은 FF를 실행하려면 백엔드에서 실행해야만 한다는 것이다. 하지만, 이건 비용적 측면에서 비싸다.
+
+예를 들어, 누군가가 1기가의 비디오를 업로드하고, 그걸 변환해야만 한다면 백엔드가 모든 일을 처리해야 할 것이다. 이럴라면 아주 좋은 서버가 필요할 것이다.
+
+메모리가 필요하고 그래픽 장치가 필요하고 등등 정말 많은 것이 필요로하다.
+
+그래서 이 문제를 고치기 위해서 WebAssembly이라는 것이 있다.
+
+WebAssembly는 개방형 표준이다. 기본적으로 웹사이트가 매우 빠른 코드를 실행할 수 있게 해준다.
+
+프론트에선 세종류의 코드만 사용할 수 있다. HTML CSS JavaScript 
+
+C나 go를 사용할 순 없다.
+
+WebAssembly는 우리가 프론트엔드에서 매우 빠른 코드를 실행할 수 있게 해준다.
+
+JavaScript를 쓰지 않고, 다른 종류의 프로그램을 사용할 수 있다.
+
+대부분 너는 WebAssembly로 컴파일되는 go 또는 Rust를 작성하게 될 것이다.
+
+주목해야 할 부분은, 실행 비용이 큰 프로그램들을 브라우저에서 실행할 수 있는 것이다.
+
+아마 미래에는 WebAssembly로 브라우저에서 돌아가는 비디오 게임을 만들 수 있을 것이다.
+
+JavaScript는 매우 느리기 때문에 매우 복잡한 비디오 게임을 만들 수 없다.
+
+ffmpeg.wasm는 비디오를 변환하기 위해 사용자의 컴퓨터를 사용한다. 
+
+지금 우리가 할 것은 사용자의 브라우저에서 비디오를 변환하는 것이다.
+
+우리는 사용자(컴퓨터)의 처리 능력을 사용 할 것이다. 우리 서버의 처리 능력을 사용하는 것이 아닌
+
+npm install @ffmpeg/ffmpeg @ffmpeg/core
+
+근데 근복적으로 webm을 왜 mp4로 변환하는가?
+
+그 이유는 모든 기기들이 webm을 이해하지 못하기 때문이다.
+
+이제 본격적으로 할것인데 기억해야 될 것이 있다.
+
+우리는 videoFile을 백엔드로부터 받는것이 아닌 브라우저로부터 받고 있다.
+
+녹화를 종료하면, 영상의 모든 정보를 가지느 object url이 만들어지는 것이다.
+
+해당 url을 눌러도 실행은 되지 않지만 url 전부를 입력하면 다운로드 창이 뜬다.
+
+이것은 event.data에 binary data가 있는데 파일일 수도 있는 binary data에 접근할 수 있어야 한다.
+
+스크린샷, 2022-04-26 19-42-00.png
+
+createObjectURL을 사용해서 말이다.
+
+브라우저에서 이 binary data에 접근할 수 있어야 한다.
+
+[사용법](https://github.com/ffmpegwasm/ffmpeg.wasm)
+
+해당 링크를 참조해보면 알겠지만 
+
+const fs = require('fs');
+const { createFFmpeg, fetchFile } = require('@ffmpeg/ffmpeg');
+
+const ffmpeg = createFFmpeg({ log: true });
+
+(async () => {
+  await ffmpeg.load();
+  ffmpeg.FS('writeFile', 'test.avi', await fetchFile('./test.avi'));
+  await ffmpeg.run('-i', 'test.avi', 'test.mp4');
+  await fs.promises.writeFile('./test.mp4', ffmpeg.FS('readFile', 'test.mp4'));
+  process.exit(0);
+})();
+
+이와같이 2개를 import해주고 사용하면 된다.
+
+import { createFFmpeg, fetchFile } from "@ffmpeg/ffmpeg";
+const handleDonwload = () => {
+  const ffmpeg = createFFmpeg({ log: true });
+
+  const a = document.createElement("a");
+  a.href = videoFile;
+  a.download = "MyRecording.webm";
+  document.body.appendChild(a);
+  a.click();
+};
+
+이와 같이 해주자. {log:true}를 사용한 이유는, 무슨일이 벌어지고 있는지 콘솔에서 확인하고 싶어서이다.
+
+이 다음은, ffmpeg.load()를 await해줘야한다.
+
+ffmpeg.load()를 await하는 이유는, 사용자가 소프트웨어를 사용할 것이기 때문이다.
+
+사용자가 JavaScript가 아닌 코드를 사용하는 것이다. 무언가를 설치해서 말이다.
+
+우리 웹사이트에서 다른 소프트웨어를 사용하는 것인데, 소프트웨어가 무거울 수 있기 때문에 기다려 줘야한다.
+
+이제 두번단계로 넘어가자..
+
+파일과 폴더가 있는 가상 컴퓨터에 있다고 생각하자. 이제 크롭(브라우저)에 있다는 생각은 잊자.
+
+webassembly를 사용하고 있기 때문에 더이상 브라우저에 있는 것이 아니다.
+
+이제 ffmpeg에 파일을 만드는 것이다.
+
+ffmpeg.FS()를 입력하면 세 가지 method가 있다.
+
+다 해보자.
+
+일단은 wrtieFile을 사용해보자.
+
+이것은 ffmpeg의 가상의 세계에 파일을 생성해준다. 가상 컴퓨터에 파일을 생성해주는 것이다.
+
+백엔드에선 multer가 파일을 만들었었다. 업로드를 하면 uploads폴더에 아바타 파일이 생긴다.
+
+이젠 프론트엔드에도 이런 폴더가 생기는 것이다.
+
+폴더와 파일이 컴퓨터 메모리에 저장되는 것이다.
+
+다음과 같이 해주자.
+
+	...
+  ffmpeg.FS("writeFile", "recording.webm");
+  
+두번째 인자는 파일명이다. 세번째 인자로는 binary data를 건네주는 것인데 우리는 binary data로 되어잇는 url을 가지고 있다. 바로 videoFile이다.
+
+  ffmpeg.FS("writeFile", "recording.webm", await fetchFile(videoFile));
+  
+videoFile은 blob이다. 
+  
+스크린샷, 2022-04-26 20-04-07.png
+
+이제 ffmpeg명령어를 입력해 줘야 한다. 아직 아무것도 한 것은 없다.
+
+[ffmpeg Document](https://ffmpeg.org/ffmpeg.html)
+
+이것을 보면 굉장히 여러가지 전송할 수 있는 것들이 있다.
+
+예를 들면 이런 명령어를 보낼 수 있는데,
+
+ffmpeg -i in.avi -metadata title="my title" out.flv
+
+보통 본인의 콘솔에서 하는게 익숙하다. 우리는 ffmpeg를 사용자의 브라우저에서 로딩하기 때문에 이 명령어를 사용자의 브라우저에서 실행 되게 할 수 있다.
+
+그래서 명령어는 "i(input)"을 쓰고 파일명.
+
+ffmpeg.run은 가상 컴퓨터에 이미 존재하는 파일을 input으로 받는것이다.
+
+  await ffmpeg.run("-i", "recording.webm", "output.mp4");
+  
+이런식으로 작성되면 된다. 세번째 인자는 output파일명이다. 
+
+여기서 추가적으로 몇가지 명령어를 적어보겠다.
+
+  await ffmpeg.run("-i", "recording.webm", "-r", "60", "output.mp4");
+
+이건 영상을 초당 60프레임으로 인코딩 해주는 명령이다.
+
+한마디로, 더 빠른 영상 인코딩을 가능하게 해주는 것이다.
+
+실행결과는 다음과 같다.
+
+스크린샷, 2022-04-26 20-15-40.png
+
+오류가 발생했다. 이 오류는 ffmpeg-core.wasm, ffmpeg-core.worker.js파일들을 찾지 못해 생기는 에러이기 때문에 아래와 같이 corePath를 지정해주시면 된다.
+
+server.js
+
+app.use("/convert", express.static("node_modules/@ffmpeg/core/dist"));
+
+recorder.js
+
+const handleDonwload = async () => {
+  const ffmpeg = createFFmpeg({
+    corePath: "/convert/ffmpeg-core.js",
+    log: true,
+  });
+  ...
+  
+이제 다시 실행해보자.
+
+스크린샷, 2022-04-26 20-17-36.png
+
+이번엔 다른 오류다. 이오류는 다음과 같다.
+
+Uncaught (in promise) ReferenceError: SharedArrayBuffer is not defined 오류 해결 방법
+FFmpeg를 실행했을 때, 콘솔창에 위와 같은 오류가 난다면 server.js에 app.set()아래에 함수를 추가해주시면 됩니다.
+
+오류 원인 : SharedArrayBuffer는 cross-origin isolated된 페이지에서만 사용할 수 있습니다. 따라서 ffmpeg.wasm을 사용하려면 Cross-Origin-Embedder-Policy: require-corp 및 Cross-Origin-Opener-Policy: same-origin를 header에 설정해 자체 서버를 호스팅해야 합니다.
+https://github.com/ffmpegwasm/ffmpeg.wasm/issues/263
+
+// server.js
+```
+app.use((req, res, next) => {
+res.header("Cross-Origin-Embedder-Policy", "require-corp");
+res.header("Cross-Origin-Opener-Policy", "same-origin");
+next();
+});
+```
+
+FFmpeg Usage
+https://github.com/ffmpegwasm/ffmpeg.wasm#usage
+
+FFmpeg API
+https://github.com/ffmpegwasm/ffmpeg.wasm/blob/master/docs/api.md#api
+
+이제 진짜 실행해보자.
+
+Peek 2022-04-26 20-19.gif
+
+이런식으로 실행된다.
+
+이제 가상 파일 시스템에 outoput.mp4라는 파일이 있다.
+
+이제 이 파일을 사용할 것이다. 이 파일은 브라우저의 메모리에 있다.
+
+ffmpeg의 FS(파일 시스템)을 이용해서 mp4파일을 가져올 것이다.
+
+	const mp4File = ffmpeg.FS("readFile", "output.mp4")
+
+	console.log(mp4File);
+	
+	console.log(mp4File.buffer);
+
+이 파일은 Uint8Array(array of 8-bit unsigned integers) 타입이 될것이다.
+
+unsigned integers는 양의 정수를 의미한다.
+
+스크린샷, 2022-04-27 10-54-28.png
+
+blob은 자바스크립트 세계의 파일과 같은 것이다. 우리가 할 일은, 이 배열로부터 blob을 만들어 내는 것이다.
+
+Uint8Array로 부터 blob을 만들 수는 없지만 ArrayBuffer로는 만들 수 있다.
+
+위에 보이는 저 배열의 raw data, 즉 binary data에 접근하려면 mp4File.buffer를 사용해야 한다.
+
+buffer는 ArrayBuffer를 반환하고, ArrayBuffer는 raw binary data를 나타내는 object이다.
+
+한 마디로 우리 영상을 나타내는 bytes의 배열이다.
+
+기억 해야 될 것은 binary data를 사용하고 싶다면 buffer를 사용해야 한다는 것이다.
+
+  const mp4Blob = new Blob([mp4File.buffer], { type: "video/mp4" });
+
+이와 같이 해주면 blob이 생긴다.
+
+이전에서도 봤지만 녹화를 하고 종료되면 data를 우리가 접근할 수 있는 URL에 넣을 수 있다는걸 봤다.
+
+const handleDonwload = async () => {
+  const ffmpeg = createFFmpeg({
+    corePath: "/convert/ffmpeg-core.js",
+    log: true,
+  });
+  await ffmpeg.load();
+
+  ffmpeg.FS("writeFile", "recording.webm", await fetchFile(videoFile));
+
+  await ffmpeg.run("-i", "recording.webm", "-r", "60", "output.mp4");
+
+  const mp4File = ffmpeg.FS("readFile", "output.mp4");
+
+  const mp4Blob = new Blob([mp4File.buffer], { type: "video/mp4" });
+
+  const mp4Url = URL.createObjectURL(mp4Blob);
+
+  const a = document.createElement("a");
+  a.href = mp4Url;
+  a.download = "MyRecording.mp4";
+  document.body.appendChild(a);
+  a.click();
+};
+
+최종 코드는 이와 같다.
+
+이제 Thumbnail(썸네일)을 만들어 보자
+
+  await ffmpeg.run("-i", "recording.webm", "-ss", "00:00:01", "-frames:v", "1", "thumbnail.jpb");
+
+여기서 --ss는 특정 시간대로 가주게 해준다. 여기서는 1초로 가는 것이다.
+
+그리고 -frames:v, 1 이것은 첫 프레임의 스크린샷을 찍어준다. 아니면 이동한 시간의 스크린샷 한 장을 찍는다고 생각해도 된다.
+
+그리고 이제 1장의 스크린샷을 thumbnail.jpg로 저장하는 것이다.
+
+이 파일은 파일시스템(FS)의 메모리에 만들어 지는 것이다.
+
+  const thumbFile = ffmpeg.FS("readFile", "thumbnail.jpg");
+
+위와 동일하게 일단 가상 메모리에 있는 jpg파일을 불러와준다.
+
+  const thumBlob = new Blob([thumbFile.buffer], { type: "image/jpg" });
+
+이제 blob을 만들었으니, 이 blob을 위한 url을 만들어야 된다.
+
+  const thumUrl = URL.createObjectURL(thumBlob);
+
+최종적으로 코드는 다음과 같다.
+
+const handleDonwload = async () => {
+  const ffmpeg = createFFmpeg({
+    corePath: "/convert/ffmpeg-core.js",
+    log: true,
+  });
+  await ffmpeg.load();
+
+  ffmpeg.FS("writeFile", "recording.webm", await fetchFile(videoFile));
+
+  await ffmpeg.run("-i", "recording.webm", "-r", "60", "output.mp4");
+
+  await ffmpeg.run(
+    "-i",
+    "recording.webm",
+    "-ss",
+    "00:00:01",
+    "-frames:v",
+    "1",
+    "thumbnail.jpb"
+  );
+
+  const mp4File = ffmpeg.FS("readFile", "output.mp4");
+  const thumbFile = ffmpeg.FS("readFile", "thumbnail.jpg");
+
+  const mp4Blob = new Blob([mp4File.buffer], { type: "video/mp4" });
+  const thumBlob = new Blob([thumbFile.buffer], { type: "image/jpg" });
+
+  const mp4Url = URL.createObjectURL(mp4Blob);
+  const thumUrl = URL.createObjectURL(thumBlob);
+
+  const a = document.createElement("a");
+  a.href = mp4Url;
+  a.download = "MyRecording.mp4";
+  document.body.appendChild(a);
+  a.click();
+
+  const thumbA = document.createElement("a");
+  thumbA.href = mp4Url;
+  thumbA.download = "MyThumbnail.jpg";
+  document.body.appendChild(thumbA);
+  thumbA.click();
+  
+  ffmpeg.FS("unlink", "recording.webm");
+  ffmpeg.FS("unlink", "output.mp4");
+  ffmpeg.FS("unlink", "thumbnail.jpg");
+
+  URL.revokeObjectURL(mp4Url);
+  URL.revokeObjectURL(thumUrl);
+  URL.revokeObjectURL(videoFile);
+  
+};
+
+마지막엔 속도측면에서 파일을 계속 들고있는걸 원하지 않기 때문에 제거 해주는 것이다. 
+
+이제 코드를 좀 정리하고, Thumbnail을 넣을 input을 추가해주자.
+
+먼저 파일명의 경우 오타가 날 경우가 많기 때문에 변수에 넣어줘서 처리해주자.
+
+그 다음은 반복되는 부분을 함수로 처리해주자.
+
+다음은 사용자가 Download Recording을 한 번 누르면, 또 누르는 것을 방지하자.
+
+최종 코드는 다음과 같다.
+
+const handleDonwload = async () => {
+  actionBtn.removeEventListener("click", handleDonwload);
+
+  actionBtn.innerText = "Transcoding...";
+
+  actionBtn.disabled = true;
+
+  const ffmpeg = createFFmpeg({
+    corePath: "/convert/ffmpeg-core.js",
+    log: true,
+  });
+  await ffmpeg.load();
+
+  ffmpeg.FS("writeFile", files.input, await fetchFile(videoFile));
+
+  await ffmpeg.run("-i", files.input, "-r", "60", files.output);
+
+  await ffmpeg.run(
+    "-i",
+    files.input,
+    "-ss",
+    "00:00:01",
+    "-frames:v",
+    "1",
+    files.thumb
+  );
+
+  const mp4File = ffmpeg.FS("readFile", files.output);
+  const thumbFile = ffmpeg.FS("readFile", files.thumb);
+
+  const mp4Blob = new Blob([mp4File.buffer], { type: "video/mp4" });
+  const thumBlob = new Blob([thumbFile.buffer], { type: "image/jpg" });
+
+  const mp4Url = URL.createObjectURL(mp4Blob);
+  const thumUrl = URL.createObjectURL(thumBlob);
+
+  downloadFile(mp4Url, "MyRecording.mp4");
+  downloadFile(thumUrl, "MyThumbnail.jpg");
+
+  ffmpeg.FS("unlink", files.input);
+  ffmpeg.FS("unlink", files.output);
+  ffmpeg.FS("unlink", files.thumb);
+
+  URL.revokeObjectURL(mp4Url);
+  URL.revokeObjectURL(thumUrl);
+  URL.revokeObjectURL(videoFile);
+
+  actionBtn.disabled = false;
+  actionBtn.innerText = "Record Again";
+  actionBtn.addEventListener("click", handleStart);
+};
+
+
+이제 백엔드를 수정해보자. 
+
+video에 thumbnailUrl을 추가할 것이다.
+
+Video.js
+
+const videoSchema = new mongoose.Schema({
+  title: { type: String, required: true, trim: true, maxLength: 80 },
+  fileUrl: { type: String, required: true },
+  thumbUrl: { type: String, required: true },
+  description: { type: String, required: true, trim: true, minLength: 20 },
+  createdAt: { type: Date, required: true, default: Date.now },
+  hashtags: [{ type: String, trim: true }],
+  meta: {
+    views: { type: Number, default: 0, required: true },
+    rating: { type: Number, default: 0, required: true },
+  },
+  owner: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "User" },
+});
+
+...
+
+upload.pug
+
+extends base.pug
+
+block content
+    div
+        video#preview
+        button#actionBtn Start Recoding
+    if errorMessage
+        span=errorMessage
+    form(method="POST", enctype="multipart/form-data")
+        label(for="video") Video File 
+        input(type="file", accept="video/*", required, id="video", name="video")
+        label(for="thumb") Thumbnail File 
+        input(type="file", accep="image/*", required, id="thumb", name="thumb")
+        input(placeholder="Title", required, type="text", name="title", maxlength=80)
+        input(placeholder="Description", required, type="text", name="description", minlength=20)
+        input(placeholder="Hashtags, separated by comma.", required, type="text", name="hashtags")
+        input(type="submit", value="Upload Video")
+block scripts 
+    script(src="/static/js/recoder.js")
+    
+문제가 있는데 우리가 route로 두 개의 파일을 보낸다는 것이다.
+
+videoRouter에는 영상만 업로드할 준비가 되어 있고, 썸네일을 업로드할 준비는 안되어 있다.
+
+파일을 업로드 하기 위해서는 Multer를 사용해야한다.
+
+여기서 문제는, 이제 Multer이 video를 받고있엇는데 썸네일도 받아야 되서 두 개의 파일을 받야아 한다는 것이다.
+
+지금까진 우린 Multer에서 single을 쓰고있엇는데 fileds라는 것도 있다.
+
+videoRouter.js
+
+videoRouter
+  .route("/upload")
+  .all(protectorMiddleware)
+  .get(getUpload)
+  .post(videoUpload.single("video"), postUpload);
+  
+  -> 
+  
+videoRouter
+  .route("/upload")
+  .all(protectorMiddleware)
+  .get(getUpload)
+  .post(
+    videoUpload.fields([
+      { name: "video", maxCount: 1 },
+      { name: "thumb", maxCount: 1 },
+    ]),
+    postUpload
+  );
+
+이렇게만 하면 postUpload Controller에 에러가 발생할 것이다.
+
+에러를 기다리는 대신 console.log(req.files)를 해보자.
+
+export const postUpload = async (req, res) => {
+  const {
+    user: { _id },
+  } = req.session;
+  console.log(req.files);
+  ...
+  
+뭔가를 업로드 해보자.
+
+스크린샷, 2022-04-27 18-11-56.png
+스크린샷, 2022-04-27 18-10-26.png
+
+이러한 오류가 나온다. undefined의 path를 읽을 수 없습니다.
+
+다행히도 그래도 req.files가 출력이 되긴 했다.
+
+그래서 이와같이 해주자.
+
+export const postUpload = async (req, res) => {
+  const {
+    user: { _id },
+  } = req.session;
+  const { video, thumb } = req.files;
+  ...
+  
+video는 배열인데, 이 배열의 첫 원소는 MyRecording이고, 마찬가지로 thumb도 MyThumbnail을 첫 원소로 하는 배열이다.
+
+maxcount를 설정해서 그런가? 만약 maxcount를 하지 않는다면 어떻게 될까?
+
+스크린샷, 2022-04-27 18-19-02.png
+
+여전히 배열이다. 그리고 아직도 오류가 나고 있다.
+
+아직 controller에서 더 수정을 해줘야 한다.
+
+    const newVideo = await Video.create({
+      title,
+      description,
+      fileUrl
+      owner: _id,
+      hashtags: Video.formatHashtags(hashtags),
+    });
+    
+    여기서 fileUrl -> fileUrl: video[0].path, 이런식으로 해줘야 하고
+    thumbUrl: thumb[0].path, 이것을 추가해줘야 한다.
+    
+이제 오류없이 실행될 것이다. 썸네일URL을 추가해줬으니 썸네일이 보이게 해주자.
+
+mixins/video.pug
+
+mixin video(video)
+    a(href=`/videos/${video.id}`).video-mixin
+        div.video-mixin__thumb(style=`background-image:url(${video.thumbUrl});background-size:cover;background-position: center`)
+        div.video-mixin__data
+            span.video-mixin__title=video.title
+            div.video-mixin__meta
+                span #{video.owner.name} · 
+                span #{video.meta.views} 회
+                
+이렇게 하면 된다.
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
