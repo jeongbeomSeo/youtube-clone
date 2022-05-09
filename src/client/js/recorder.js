@@ -21,8 +21,8 @@ const downloadFile = (fileUrl, fileName) => {
   a.click();
 };
 
-const handleDonwload = async () => {
-  actionBtn.removeEventListener("click", handleDonwload);
+const handleDownload = async () => {
+  actionBtn.removeEventListener("click", handleDownload);
 
   actionBtn.innerText = "Transcoding...";
 

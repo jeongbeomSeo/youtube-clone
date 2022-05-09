@@ -97,6 +97,14 @@ babel 설정 파일을 만들어 줍니다.
 
     $ touch babel.config.json
 
+이후 babel.config.json에 다음과 같이 해줍니다.
+
+```js
+{
+    "presets": ["@babel/preset-env"]
+}
+```
+
 Smart preset인 preset-env를 설치하여 줍니다.
 
     $ npm instal @babel/preset-env --save-dev
