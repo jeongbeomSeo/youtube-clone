@@ -17,8 +17,11 @@ app.set("views", process.cwd() + "/src/views");
 
 app.use("/convert", express.static("node_modules/@ffmpeg/core/dist"));
 app.use((req, res, next) => {
-  res.header("Cross-Origin-Embedder-Policy", "require-corp");
-  res.header("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept"
+  );
   next();
 });
 app.use(logger);
