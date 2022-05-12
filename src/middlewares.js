@@ -9,7 +9,7 @@ const s3 = new aws.S3({
   },
 });
 
-const isHeorku = prcess.env.NODE_ENV === "production";
+const isHeorku = process.env.NODE_ENV === "production";
 
 const s3ImageUploader = multerS3({
   s3: s3,
