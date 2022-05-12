@@ -13,16 +13,18 @@
 
 프로젝트하면서 정리해 놓은 이 Note들은 Lecture Order에 기반을 두고 있으므로 다음과 같은 순서로 읽는 것이 좋습니다.
 
-1.  [Introduction](./introduction.md)
-2.  [Set-up](./set-up.md)
-3.  [Express](./express.md)
-4.  [Router](./router.md)
-5.  [Templates](./templates.md)
-6.  [Database](./database.md)
-7.  [User Authentication](./user-authenticatoin.md)
-8.  [User Profile](./user-profile.md)
-9.  [Web Pack](./webpack.md)
-10. [Video Player](./videoPlayer.md)
+1.  [Introduction](./main/introduction.md)
+2.  [Set-up](./main/set-up.md)
+3.  [Express](./main/express.md)
+4.  [Router](./main/router.md)
+5.  [Templates](./main/templates.md)
+6.  [Database](./main/database.md)
+7.  [User Authentication](./main/user-authenticatoin.md)
+8.  [User Profile](./main/user-profile.md)
+9.  [Web Pack](./main/webpack.md)
+10. [Video Player](./main/videoPlayer.md)
+11. [Flash Message and Comment](./main/flashMessage-Comment.md)
+12. [Deployment](./main/deployment.md)
 
 [Challenge](./challenge.md)의 경우 challenge를 하면서 알게 된 것들을 정리한 파일입니다.
 
