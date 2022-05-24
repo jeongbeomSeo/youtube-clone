@@ -1,5 +1,12 @@
 # Deployment
 
+- [Deployment](#deployment)
+  - [1. Set-Up](#1-set-up)
+  - [2. Heroku](#2-heroku)
+  - [3. MongoDB Atlas](#3-mongodb-atlas)
+  - [4. Modify Code](#4-modify-code)
+  - [4. AWS](#4-aws)
+
 ## 1. Set-Up
 
 이제 우리 서버에서만 사용하는 것이 아니라 남들도 다 볼수 있게끔 배포를 해볼 것이다.

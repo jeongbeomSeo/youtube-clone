@@ -617,11 +617,11 @@ userRouter
   .post(uploadFiles.single("avatar"), postEdit);
 ```
 
-yploadFiles뒤에 쓰이는 것은 여러가지 있는데, fields, none, single array, 등이 있다.
+uploadFiles뒤에 쓰이는 것은 여러가지 있는데, fields, none, single array, 등이 있다.
 
 사용자가 다수의 파일을 보낼 때도 있고 해서 여러가지 경우의 수를 위해서 있는 것이고, 우리는 하나의 파일만 취급할 것이므로 single을 사용한다.
 
-single()안의 매개변수에는 **어디로부터 오는지**를 적어주면 된다. 즉, Template에 적어둔 **input(type+"file")의 attr인 name**을 적어주면 된다.
+single()안의 매개변수에는 **어디로부터 오는지**를 적어주면 된다. 즉, Template에 적어둔 **input(type="file")의 attr인 name**을 적어주면 된다.
 
 순서대로 살펴보면,
 

@@ -1,6 +1,17 @@
-# Challenge Note
+# Note
 
-해당 페이지는 Challenge를 합니다가 찾아보면서 정리한 파일입니다.
+해당 페이지는 개념 및 함수를 정리한 파일입니다.
+
+- [Note](#note)
+  - [JS 함수](#js-함수)
+  - [for ...in / for ...of / forEach](#for-in--for-of--foreach)
+    - [forEach 반복문](#foreach-반복문)
+    - [for ...in 반복문](#for-in-반복문)
+    - [for ...of 반복문](#for-of-반복문)
+    - [for in 반복문과 for of 반복문의 차이점](#for-in-반복문과-for-of-반복문의-차이점)
+    - [includes()](#includes)
+  - [router사용시 주의 사항](#router사용시-주의-사항)
+    - [정규식의 중요성](#정규식의-중요성)
 
 ## JS 함수
 

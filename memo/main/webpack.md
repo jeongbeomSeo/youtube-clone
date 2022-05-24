@@ -1,5 +1,16 @@
 # WebPack
 
+- [WebPack](#webpack)
+  - [1. webpack이란?](#1-webpack이란)
+    - [1.1 Webpack 왜 사용하는 것일까?](#11-webpack-왜-사용하는-것일까)
+    - [1.2 번들링 이점](#12-번들링-이점)
+  - [2. webpack.config.js 기본 설정](#2-webpackconfigjs-기본-설정)
+    - [2.1 webpack.config.js 구성 요소](#21-webpackconfigjs-구성-요소)
+    - [2.2 webpack.config.js 설정 { entry, output }](#22-webpackconfigjs-설정--entry-output-)
+    - [2.3 webpack.config.js 기본 설정 { Loader }](#23-webpackconfigjs-기본-설정--loader-)
+  - [3. WebPack 활용](#3-webpack-활용)
+    - [3.1 webpack CSS](#31-webpack-css)
+
 ## 1. webpack이란?
 
 프론트엔드 개발자라면 꼭 알아야 하는 기술중 하나라고 한다.
@@ -46,7 +57,7 @@
 
 그렇다면 번들링을 하면 무엇이 좋을까?
 
-## 1.2 번들링 이점
+### 1.2 번들링 이점
 
 1. 이전에 방식에서는 각 파일들마다 서버에 요청을 하여 자원을 얻어와야 했지만, 웹팩을 이용한 번들링은 같은 타입(html,css,js등)의 파일을 묶어서 요청/응답을 받기 때문에 **네트워크 코스트가 줄게된다**.
 2. Webpack ver.4 부터는 development모드, production모드 두가지의 모드를 지원하여 production모드로 번들링을 진행할경우 코드 난독화, 압축, 최적화 작업을 한다. 한마디로 **상용화된 프로그램을 사용자가 느끼기에 더욱 쾌적한 환경 및 보안까지 신경쓰면서 노출시킬 수 있다는 점**이다.

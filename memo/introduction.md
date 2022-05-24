@@ -26,7 +26,7 @@
 11. [Flash Message and Comment](./main/flashMessage-Comment.md)
 12. [Deployment](./main/deployment.md)
 
-[Challenge](./challenge.md)의 경우 challenge를 하면서 알게 된 것들을 정리한 파일입니다.
+[Note](./main/note.md)의 경우 최종 정리를 하면서 정리한 파일입니다.
 
 ## 2. NodeJS에 관하여
 

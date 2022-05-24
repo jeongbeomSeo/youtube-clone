@@ -1,5 +1,25 @@
 # Video Player
 
+- [Video Player](#video-player)
+  - [1. Introduction](#1-introduction)
+  - [2. Set Up before input video](#2-set-up-before-input-video)
+  - [3. Video Player](#3-video-player)
+    - [3.1 Play(재생)](#31-play재생)
+    - [3.2 Mute(음소거)](#32-mute음소거)
+    - [3.3 Time(시간)](#33-time시간)
+      - [3.3.1 Time Formatting](#331-time-formatting)
+      - [3.3.2 Time Update](#332-time-update)
+    - [3.4 Full Screen](#34-full-screen)
+    - [3.5 Display Button](#35-display-button)
+  - [4. Views](#4-views)
+  - [5. Video Recorder](#5-video-recorder)
+    - [5.1 init Recording](#51-init-recording)
+    - [5.2 Start Recording](#52-start-recording)
+    - [5.3 Download Recording](#53-download-recording)
+    - [5.4 convert Recording](#54-convert-recording)
+      - [5.4.1 FFmpeg](#541-ffmpeg)
+  - [6. Thumbnail(썸네일)](#6-thumbnail썸네일)
+
 ## 1. Introduction
 
 먼저 이번 챕터에서 무슨 내용을 다룰 것인지를 설명하고 그리고 진행을 해볼 예정이다.
