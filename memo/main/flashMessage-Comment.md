@@ -114,7 +114,7 @@ export const logout = (req, res) => {
 
 **템플릿을 rendering하는 경우 메세지를 건네 줄 수 있기 때문에 보통 redirect하는 경우에 주로 쓰이는 것이다.**
 
-백에서 우리가 하는 것은 **req.flash()를 이ㅏ용해서 locals 속성을 만드는 것**을 하였다.
+백에서 우리가 하는 것은 **req.flash()를 이용해서 locals 속성을 만드는 것**을 하였다.
 
 그렇다면 이것을 프론트에선 어떻게 활용할 것인가? **global variable인 req.locals**에 담긴 변수들을 사용했던 방법 기억나는가?
 
@@ -694,7 +694,7 @@ const handleSubmit = (event) => {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-    },s
+    },
     body: JSON.stringify({ text: text, rating: "5" }),
   });
 };

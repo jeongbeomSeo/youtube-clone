@@ -305,7 +305,7 @@ homepage에서 video를 클릭해서 해당 video page로 갔을 경우 비디�
 
 > **meta data는 무엇인가?**
 >
-> meata data는 비디오를 제외한 모든 것을 말한다.
+> meta data는 비디오를 제외한 모든 것을 말한다.
 >
 > 예를 들어, 비디오의 시간이라든가 가로, 세로 크기 등 움직이는 이미지들을 제외한 모든 Extra를 말한다.
 
@@ -350,7 +350,7 @@ video.addEventListner("timeupdate", handleTimeUpdate);
 
 그래서 수정해줄 필요가 있는데, 여기서 사용할 함수는 [new Date()](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Date/Date), [toISOString()](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Date/toISOString), [substring()](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/String/substring) 이렇게 3가지를 사용할 것이다.
 
-**new Date()**에서 Date 객체는 1970년 1월 1일 09:00 시점을 이후로 date를 만들어 준다.
+**new Date()** 에서 Date 객체는 1970년 1월 1일 09:00 시점을 이후로 date를 만들어 준다.
 
 주의할 점은 **new Date**를 사용할 때 신경써야 될 것은 시간의 단위가 ms이기 때문에 매개변수에 초단위로 넣고 싶다면 **n \* 1000**로 적어줘야 한다는 것이다.
 
@@ -365,7 +365,7 @@ video.addEventListner("timeupdate", handleTimeUpdate);
 ```js
 ...
 const formatTime = (seconds) => {
-  new Date(seconds * 1000).toISOString().substring(11, 8);
+  new Date(seconds * 1000).toISOString().substring(14, 19);
 };
 
 const handleLoadedMetadata = () => {
@@ -677,7 +677,7 @@ app.use("/api", apiRouter);
 
 이제 유저가 영상을 시청하면 백엔드에 요청을 보낼건데, 이 요청으로는 URL을 바꾸지 않을 것이다.
 
-즉, **요청을 보내더라도 URL을 바꾸지 ㅇ낳고 템플릿을 렌더링 하지 않겟다는 것**이다.
+즉, **요청을 보내더라도 URL을 바꾸지 않고 템플릿을 렌더링 하지 않겟다는 것**이다.
 
 router.js에 다음코드를 추가하자.
 
@@ -879,7 +879,7 @@ pug에 이 코드를 추가하고 js에서 받아서 처리해주기 시작하�
 
 따라서 promise방식을 사용하거나 async await 방식을 사용해야 한다.
 
-지끔까지의 전체 코드는 다음과 같다.
+지금까지의 전체 코드는 다음과 같다.
 
 ```js
 const startBtn = document.getElementById("startBtn");
@@ -1232,7 +1232,7 @@ const handleDonwload = () => {
 
 여기서 log:true를 사용한 이유는, 무슨일이 벌어지고 있는지 console창에서 확인하기 위함이다.
 
-이 다음은, ffmpeg.load()를 await해줘야 하는데, 사요자가 소프트웨어를 사용할 것이기 때문이다.
+이 다음은, ffmpeg.load()를 await해줘야 하는데, 사용자가 소프트웨어를 사용할 것이기 때문이다.
 
 Javascript가 아닌 코드를 사용해서 무언가를 설치해서 사용하기 때문에 소프트웨어가 무거울 수 있는 것을 감안해서 기다려 줘야 한다.
 
@@ -1466,7 +1466,7 @@ const handleDonwload = async () => {
 };
 ```
 
-마지막엔 속도측면에서 파일으 ㄹ계속 들고있는것을 원하지 않기 때문에 제거해주는 것이다.
+마지막엔 속도측면에서 파일을 계속 들고있는 것을 원하지 않기 때문에 제거해주는 것이다.
 
 여기서 수정해야 될 부분이 세가지다.
 
